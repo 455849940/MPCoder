@@ -64,10 +64,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
             pbar = tqdm(colour="blue", desc=f"Training Epoch: {epoch+1}", total=total_length, dynamic_ncols=True)
             for step, batch in enumerate(train_dataloader):
                 
-                for key in batch.keys():
-                    batch[key] = batch[key].cuda()              
-                
-                loss, logits, hidden_states, predictions = model(**batch)
+                user_id = batch['user_id'].cuda()
+                input_ids = batch['input_ids'].cuda()
+                attention_mask = batch['attention_mask'].cuda()
+                                 
+                loss, logits, hidden_states, predictions = model(user_id,input_ids,attention_mask)
                 loss = loss / gradient_accumulation_steps
                 total_loss += loss.detach().float()
                 # regular backpropagation when fp16 is not used
@@ -144,13 +145,14 @@ def evaluation(model,train_config, eval_dataloader, tokenizer, local_rank):
     eval_loss = 0.0  # Initialize evaluation loss
     with MemoryTrace() as memtrace:
         for step, batch in enumerate(tqdm(eval_dataloader,colour="green", desc="evaluating Epoch", dynamic_ncols=True)):
-            for key in batch.keys():
-                
-                batch[key] = batch[key].cuda()
+            user_id = batch['user_id'].cuda()
+            input_ids = batch['input_ids'].cuda()
+            attention_mask = batch['attention_mask'].cuda()
+                                 
             # Ensure no gradients are computed for this scope to save memory
             with torch.no_grad():
                 # Forward pass and compute loss
-                loss, logits, hidden_states, predictions = model(**batch)
+                loss, logits, hidden_states, predictions = model(user_id,input_ids,attention_mask)
                 eval_loss += loss.detach().float()
             # Decode predictions and add to evaluation predictions list
             preds = torch.argmax(logits, -1)
@@ -236,8 +238,6 @@ def print_model_size(model, config, rank: int = 0) -> None:
         print(f"--> Model {config.model_name}")
         total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"\n--> {config.model_name} has {total_params / 1e6} Million params\n")
-
-
 
 
 def get_policies(cfg, rank):

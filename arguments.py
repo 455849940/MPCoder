@@ -41,10 +41,15 @@ class train_config(TrainingArguments):
     )
 
     best_epoch: int = field(
-        default=1,
+        default=2,
         metadata={"help": "eval best epoch."}
     ) 
+    # mode generate
     
+    temperature: float = field( default=0.0, metadata={"help": "generate temperature"})
+    top_p: float = field( default=0.9, metadata={"help": "generate top_p"})
+    max_total_seq_len: int = field(default=10000,metadata={"help": "generate_length."})
+    max_generate_length: int = field(default=5000,metadata={"help": "generate_length."})  
     # experiment setups
     
     output_dir: str = field(
@@ -52,10 +57,6 @@ class train_config(TrainingArguments):
         metadata={"help": "output_dir"}
     )
     
-    reward_domain: str = field(
-        default="normal", 
-        metadata={"help": "the domain for reward model training."}
-    )
     
     # tokenizer params
     padding_side: str = field(
@@ -63,26 +64,30 @@ class train_config(TrainingArguments):
         metadata={"help": "the direction for tokenizer to add padding tokens."}
     )
 
+    per_device_test_batch_size: int = field(default= 2,metadata={"help": "per_device_test_batch_size."})
 
     # data params
-
+    language : str = field(default="Java",metadata={"help": "language data."})   
     problem_path: str = field(
         default="./data/content_compelete.json",
         metadata={"help": "the path to load data."}
     )   
 
     train_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/train/Java_programming_train.json"],
+        default_factory=lambda: ["./data/Java_programming/Java_programming_train.json"],
         metadata={"help": "train datasets paths."}
     )
 
 
     eval_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/dev/Java_programming_dev.json"],
+        default_factory=lambda: ["./data/Java_programming/Java_programming_dev.json"],
         metadata={"help": "evaluation datasets paths."}
     )
 
-
+    test_data_path: List[str] = field(
+        default_factory=lambda: ["./data/Java_programming/Java_programming_dev.json"],
+        metadata={"help": "train datasets paths."}
+    )
     # training hyperparams
     eval_at_start: bool = field(
         default=False,

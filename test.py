@@ -78,6 +78,25 @@ def main():
         )  
         [print(f'Key: {k}, Value: {v}') for k, v in results.items()]
 if __name__ == "__main__":
+    list = [0,1,2,3,4,5,6]
+    print(list[0:2])
+
+    # 假设 attention_mask 是一个张量，维度为 (batch_size, sequence_length)
+    attention_mask = torch.tensor([
+        [1, 1, 1, 0, 0],
+        [1, 1, 1, 1, 0],
+        [1, 1, 0, 0, 0]
+    ]).cuda()
+
+    # 逐行求和，得到每个样本的长度
+    lengths = attention_mask.sum(dim=1)
+    max_value = torch.max(lengths)
+    min_value = torch.min(lengths)
+    print(max_value)
+    print(min_value)
+    print(lengths)
+    print(type(lengths))
+    input()
     val = [i for i in range(0,20)]
     print(val)
     

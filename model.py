@@ -29,7 +29,7 @@ class PreferCodeLlama(nn.Module):
         initrange = 0.1
         self.user_embeddings.weight.data.uniform_(-initrange, initrange)
         
-    def forward(self, user_id, input_ids, attention_mask, labels ):
+    def forward(self, user_id, input_ids, attention_mask):
         ignore_index = -100
         text = input_ids
         mask = attention_mask
@@ -42,28 +42,30 @@ class PreferCodeLlama(nn.Module):
 
         w_emd = self.model.model.embed_tokens(input_ids)  # (batch_size, tgt_len, emsize)
         src_emd = torch.cat([u_emd, w_emd], 1)  # (batch_size, total_len, emsize)
-        
-        
-        pad_left = torch.ones((batch_size, self.user_len)).cuda()
-        pad_mask = torch.cat([pad_left, mask], 1)  # (batch_size, total_len)
-        
-        # prediction for training
-        pred_left = torch.full((batch_size, self.user_len), ignore_index, dtype=torch.int64).cuda()  # (batch_size, src_len)
-        pred_right = torch.where(mask == 1, text, torch.tensor(ignore_index).cuda())  # replace <pad> with ignore_index
-        newlabels = torch.cat([pred_left, pred_right], 1)
-        
-        output = self.model(
-            #input_ids=input_ids,
-            inputs_embeds = src_emd,
-            attention_mask = pad_mask,
-            labels= newlabels,
-            return_dict = True
-        )
-        
-        loss = output.loss
-        logits = output.logits
-        hidden_states = output.hidden_states
-        predictions = logits.argmax(dim=-1)
-        
-        return loss, logits, hidden_states, predictions
+        if mask is None:
+            # auto-regressive generation
+            return self.model.forward(inputs_embeds=src_emd)
+        else:
+            pad_left = torch.ones((batch_size, self.user_len)).cuda()
+            pad_mask = torch.cat([pad_left, mask], 1)  # (batch_size, total_len)
+            
+            # prediction for training
+            pred_left = torch.full((batch_size, self.user_len), ignore_index, dtype=torch.int64).cuda()  # (batch_size, src_len)
+            pred_right = torch.where(mask == 1, text, torch.tensor(ignore_index).cuda())  # replace <pad> with ignore_index
+            newlabels = torch.cat([pred_left, pred_right], 1)
+            
+            output = self.model(
+                #input_ids=input_ids,
+                inputs_embeds = src_emd,
+                attention_mask = pad_mask,
+                labels= newlabels,
+                return_dict = True
+            )
+            
+            loss = output.loss
+            logits = output.logits
+            hidden_states = output.hidden_states
+            predictions = logits.argmax(dim=-1)
+            
+            return loss, logits, hidden_states, predictions
         

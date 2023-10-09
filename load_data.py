@@ -34,17 +34,18 @@ class TextRewardDataset(Dataset):
             for item in batch:
                 id_batch.append(item['user_id'])
                 instruction_list.append(item['input'])
+                labels_batch.append(item['code']) 
             
             encoded_inputs = self.tokenizer(instruction_list,padding=True, return_tensors='pt')
             input_ids_batch = encoded_inputs["input_ids"]
             attention_mask_batch = encoded_inputs["attention_mask"]
-            labels_batch = encoded_inputs["input_ids"]
+    
             
             return {
                 "user_id": torch.tensor(id_batch).long(),
                 "input_ids": input_ids_batch,
                 "attention_mask": attention_mask_batch,
-                "labels": labels_batch
+                "code_labels": labels_batch
             }
             
     
@@ -54,11 +55,16 @@ class processClass:
             self.id2vidmap = dict()
             self.vid2idmap = dict()  
                 
-    def get_instruction(self, input, answer):
-        instruction =B_SYS + "Provide answers in Java"+ E_SYS + input
-        return f"{B_INST} {(instruction).strip()} {E_INST} {(answer).strip()} "
-
-    def prepare_data_item(self, items, problem_content,tokenizer=None, padding=False):
+    def get_instruction(self, input, answer,language, is_test = False):
+        instruction =B_SYS + f"Provide answers in {language}"+ E_SYS + input
+        if is_test:
+            text = f"{B_INST} {(instruction).strip()} {E_INST}"
+        else:
+            text = f"{B_INST} {(instruction).strip()} {E_INST} {(answer).strip()} "
+        return text 
+    
+    
+    def prepare_data_item(self, language, items, problem_content,tokenizer=None, padding=False, is_test = False):
         data_list = []
     
         for i in range(0,len(items)):
@@ -72,7 +78,8 @@ class processClass:
             new_items['code'] = items[i]['code']
             user_vir_id = self.id2vidmap[user_id]
             new_items['user_id'] = user_vir_id
-            new_items['input'] = self.get_instruction(problem_content[i], new_items['code']) 
+            
+            new_items['input'] = self.get_instruction(problem_content[i], new_items['code'], language,is_test) 
             data_list.append(new_items)
             
             
@@ -87,18 +94,22 @@ class processClass:
         return data_list
 
     #获取部分还是全部数据
-    def get_data_iter(self,data_list, debug=False):
+    def get_data_iter(self,data_list, debug=False, is_test=False):
         if debug:
             data_size = len(data_list)
-            data_list = [data_list[i] for i in range(min(int(0.1*data_size), 100))]
+            if is_test:
+                up_data_size = 10
+            else :
+                up_data_size = 100
+            data_list = [data_list[i] for i in range(min(int(0.1*data_size), up_data_size))]
 
         #if (not torch.distributed.is_initialized()) or (torch.distributed.get_rank() == 0):
         #    return tqdm(data_list)
         #else:
         return data_list
         
-    #可能根据dev和train的不同修改成对应的数据内容 字段名可以一致但内容不同
-    def load_text_score_dataset(self,problem_path, data_path, tokenizer=None, debug=False, padding=False, batch_size = 1):
+    #可能根据test和train的不同修改成对应的数据内容 字段名可以一致但内容不同
+    def load_text_score_dataset(self,language, problem_path, data_path, tokenizer=None, debug=False, padding=False, batch_size = 1,is_test=False):
         print("loading text-score dataset from: \n   {}".format(data_path))
 
         if data_path[-4:] == 'json':
@@ -109,12 +120,12 @@ class processClass:
             problem_map[item['id']] = item['english_content']
         
         outputs = []
-        data_list = self.get_data_iter(data_list, debug=debug)
+        data_list = self.get_data_iter(data_list, debug=debug, is_test=is_test)
         data_list_len = len(data_list)
         for i in range(0, len(data_list), batch_size):
             items = data_list[i:min(i+batch_size, data_list_len)]
             problem_list =  [problem_map[item['problem_id']] for item in items]
-            new_item = self.prepare_data_item(items, problem_content = problem_list,tokenizer=tokenizer, padding=padding)
+            new_item = self.prepare_data_item(language, items, problem_content = problem_list,tokenizer=tokenizer, padding=padding, is_test = is_test)
             
             if new_item is not None:
                 outputs.append(new_item)
@@ -125,47 +136,59 @@ class processClass:
         print("finished processing {}  data.".format(len(outputs)))
         return outputs
 
-    def get_train_dataset(self,args, tokenizer):    
+    def get_train_dataset(self,args, tokenizer, is_test = False):    
         all_train_data = []
-        
         for train_data_path in args.train_data_path:
             train_data = self.load_text_score_dataset(
+                language = args.language,
                 problem_path=args.problem_path,
                 data_path=train_data_path,
                 tokenizer=tokenizer, 
                 debug=args.debug_mode,
                 padding=not args.per_device_train_batch_size == 1,
-                batch_size = args.per_device_train_batch_size
+                batch_size = args.per_device_train_batch_size,
+                is_test = is_test
             )
             all_train_data.extend(train_data)
-
         if args.debug_mode:
             print(f">>> check tokenized data:")        
             print(f">>> {all_train_data[0]}")
-
-
         train_set = TextRewardDataset(all_train_data, tokenizer)
         return train_set
 
-    def get_eval_datasets(self,args, tokenizer):
-    
+    def get_eval_datasets(self,args, tokenizer, is_test = False):
         all_eval_data = []
-
         for data_path in args.eval_data_path:
             eval_data_list = self.load_text_score_dataset(
+                language = args.language,
                 problem_path=args.problem_path,
                 data_path=data_path,
                 tokenizer=tokenizer,
                 debug=args.debug_mode,
                 padding=not args.per_device_eval_batch_size == 1,
-                batch_size = args.per_device_eval_batch_size
+                batch_size = args.per_device_eval_batch_size,
+                is_test = is_test
             )
             all_eval_data.extend(eval_data_list)
-
-        eval_dataset = TextRewardDataset(eval_data_list, tokenizer)
-            
+        eval_dataset = TextRewardDataset(eval_data_list, tokenizer)    
         return eval_dataset
-
+    
+    def get_test_datasets(self,args, tokenizer, is_test = True):
+        all_test_data = []
+        for data_path in args.test_data_path:
+            test_data_list = self.load_text_score_dataset(
+                language = args.language,
+                problem_path=args.problem_path,
+                data_path=data_path,
+                tokenizer=tokenizer,
+                debug=args.debug_mode,
+                padding=not args.per_device_test_batch_size == 1,
+                batch_size = args.per_device_test_batch_size,
+                is_test = is_test
+            )
+            all_test_data.extend(test_data_list)
+        test_dataset = TextRewardDataset(test_data_list, tokenizer)    
+        return test_dataset
       
 if __name__ == "__main__":
     parser = transformers.HfArgumentParser(train_config)
