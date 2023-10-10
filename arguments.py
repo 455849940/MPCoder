@@ -41,15 +41,15 @@ class train_config(TrainingArguments):
     )
 
     best_epoch: int = field(
-        default=2,
+        default=57,
         metadata={"help": "eval best epoch."}
     ) 
     # mode generate
     
     temperature: float = field( default=0.0, metadata={"help": "generate temperature"})
     top_p: float = field( default=0.9, metadata={"help": "generate top_p"})
-    max_total_seq_len: int = field(default=10000,metadata={"help": "generate_length."})
-    max_generate_length: int = field(default=5000,metadata={"help": "generate_length."})  
+    max_total_seq_len: int = field(default=3000,metadata={"help": "generate_length."})
+    max_generate_length: int = field(default=1000,metadata={"help": "generate_length."})  
     # experiment setups
     
     output_dir: str = field(

@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=3 python API_inference.py
+CUDA_VISIBLE_DEVICES=1 python API_inference.py

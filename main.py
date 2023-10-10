@@ -50,7 +50,7 @@ def main():
     idnum = proc.idnum
     print(idnum)
     print("--------")
-    input()
+ 
     idnum = proc.idnum
     train_dataloader = DataLoader(train_data_set , batch_size=args.per_device_train_batch_size, collate_fn=train_data_set.collate_batch, num_workers=4)
     eval_dataloader = DataLoader(eval_dataset_set , batch_size=args.per_device_eval_batch_size, collate_fn=train_data_set.collate_batch,  shuffle = False, num_workers=4)

@@ -96,7 +96,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
         if train_config.do_eval:
             eval_ppl, eval_epoch_loss = evaluation(model, train_config, eval_dataloader, tokenizer, local_rank = 0)
             checkpoint_start_time = time.perf_counter()
-            if train_config.save_model and eval_epoch_loss < best_val_loss:    
+            if train_config.save_model and eval_epoch_loss < best_val_loss and epoch > 50:
                 save_model_checkpoint(model,train_config, epoch)
                 print(" Saving the model checkpoints." + f"{epoch}")
                 print("=====================================================")                     

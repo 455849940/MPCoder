@@ -56,11 +56,17 @@ def generate(model, tokenizer, args, batch):
         stop_reached = torch.tensor([False] * batch_size, device="cuda")
         #model forward 自回归生成tokens
         print("yes")
+        print(total_len)
+        print(max_prompt_len)
+        print("-------")
+        in_tokens = tokens[:, 0:min_prompt_len]
+
+        kvcache = None
         for cur_pos in range(min_prompt_len, total_len):
-            print(cur_pos)
-            modeling_outputs = model.forward(user_id = user_id,input_ids = tokens[:, 0:cur_pos],attention_mask = None) #think
+            #print(cur_pos)
+            modeling_outputs = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
             logits = modeling_outputs.logits
-           
+            kvcache = modeling_outputs.past_key_values
             
             if args.temperature > 0:
                 probs = torch.softmax(logits[:, -1] / args.temperature, dim=-1)
@@ -75,6 +81,7 @@ def generate(model, tokenizer, args, batch):
                 input_text_mask[:, cur_pos], tokens[:, cur_pos], next_token
             ) #小于输入长度时，选择tokens[:, cur_pos]为next_token
             
+            in_tokens = next_token.unsqueeze(1)
             
             tokens[:, cur_pos] = next_token
             stop_reached |= (~input_text_mask[:, cur_pos]) & (next_token == stop_token)
@@ -132,12 +139,13 @@ def predict(model, train_config, test_dataloader, tokenizer):
             generation_tokens = generate(model, tokenizer, train_config, batch)
             user_id = batch['user_id']
             input_ids = batch['input_ids'] #test应该只有问题而没有回答
-            code_lables = batch['code_lables'] 
+            code_lables = batch['code_labels'] 
             #for i in range(train_config.per_device_test_batch_size):
             #    generation_token = generation_tokens[i]
             code_generations = [tokenizer.decode(t) for t in generation_tokens]
-            for i,code_generation in code_generations:
-                item = {"user_id":user_id[i],"problem":tokenizer.decode(input_ids[i]),"code_reply":code_generation}
+            for i in range(len(code_generations)):
+                code_generation = code_generations[i]
+                item = {"user_id":str(user_id[i]),"problem":str(tokenizer.decode(input_ids[i])),"code_reply":str(code_generation)}
                 generation_json.append(item)
     json.dump(
         generation_json,
@@ -174,7 +182,7 @@ def main():
     train_data_set = proc.get_train_dataset(args,tokenizer)
     test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
     args.idnum = proc.idnum
-    test_dataloader = DataLoader(test_data_set , batch_size=args.per_device_train_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
+    test_dataloader = DataLoader(test_data_set , batch_size=args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
     #print(tokenizer.pad_token_id)
 
     # inint model
