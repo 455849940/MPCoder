@@ -75,6 +75,7 @@ class processClass:
                 self.vid2idmap[self.idnum] = user_id
                 self.idnum += 1
             
+            
             new_items['code'] = items[i]['code']
             user_vir_id = self.id2vidmap[user_id]
             new_items['user_id'] = user_vir_id
@@ -87,7 +88,7 @@ class processClass:
 
           
     def load_json_data(self,data_path):
-        print("loading text-score dataset from: \n   {}".format(data_path))
+        #print("loading text-score dataset from: \n   {}".format(data_path))
         with open(data_path, 'r') as f:
             data_list = json.load(f)
 
@@ -98,7 +99,7 @@ class processClass:
         if debug:
             data_size = len(data_list)
             if is_test:
-                up_data_size = 10
+                up_data_size = 100
             else :
                 up_data_size = 100
             data_list = [data_list[i] for i in range(min(int(0.1*data_size), up_data_size))]
@@ -109,8 +110,9 @@ class processClass:
         return data_list
         
     #可能根据test和train的不同修改成对应的数据内容 字段名可以一致但内容不同
-    def load_text_score_dataset(self,language, problem_path, data_path, tokenizer=None, debug=False, padding=False, batch_size = 1,is_test=False):
-        print("loading text-score dataset from: \n   {}".format(data_path))
+    def load_text_score_dataset(self,language, problem_path, data_path, tokenizer=None, debug=False, padding=False, batch_size = 1,is_test=False,rank = 0):
+        if rank == 0:
+            print("loading text-score dataset from: \n   {}".format(data_path))
 
         if data_path[-4:] == 'json':
             data_list = self.load_json_data(data_path)
@@ -132,11 +134,11 @@ class processClass:
             
             
         outputs = list(chain.from_iterable(outputs))
-       
-        print("finished processing {}  data.".format(len(outputs)))
+        if rank == 0:
+            print("finished processing {}  data. in {}".format(len(outputs), data_path))
         return outputs
 
-    def get_train_dataset(self,args, tokenizer, is_test = False):    
+    def get_train_dataset(self,args, tokenizer, is_test = False, rank = 0):    
         all_train_data = []
         for train_data_path in args.train_data_path:
             train_data = self.load_text_score_dataset(
@@ -147,7 +149,8 @@ class processClass:
                 debug=args.debug_mode,
                 padding=not args.per_device_train_batch_size == 1,
                 batch_size = args.per_device_train_batch_size,
-                is_test = is_test
+                is_test = is_test,
+                rank = rank
             )
             all_train_data.extend(train_data)
         if args.debug_mode:
@@ -156,7 +159,7 @@ class processClass:
         train_set = TextRewardDataset(all_train_data, tokenizer)
         return train_set
 
-    def get_eval_datasets(self,args, tokenizer, is_test = False):
+    def get_eval_datasets(self,args, tokenizer, is_test = False, rank = 0):
         all_eval_data = []
         for data_path in args.eval_data_path:
             eval_data_list = self.load_text_score_dataset(
@@ -167,7 +170,8 @@ class processClass:
                 debug=args.debug_mode,
                 padding=not args.per_device_eval_batch_size == 1,
                 batch_size = args.per_device_eval_batch_size,
-                is_test = is_test
+                is_test = is_test,
+                rank = rank
             )
             all_eval_data.extend(eval_data_list)
         eval_dataset = TextRewardDataset(eval_data_list, tokenizer)    

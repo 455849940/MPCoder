@@ -16,12 +16,7 @@ class PreferCodeLlama(nn.Module):
         super(PreferCodeLlama, self).__init__()
         self.model = LlamaForCausalLM.from_pretrained(config.model_name_or_path) 
         self.model.resize_token_embeddings(self.model.model.embed_tokens.weight.size(0) + 8)
-        # freeze pretrained model parameters        
-        if config.freezeLM:
-           for name, param in self.model.named_parameters():
-                #print(name)
-                param.requires_grad=False
-                
+                     
         self.user_len = 20
         self.emsize = self.model.model.embed_tokens.weight.size(1)  #
         self.user_embeddings = nn.Embedding(config.idnum * self.user_len, self.emsize)
@@ -30,16 +25,18 @@ class PreferCodeLlama(nn.Module):
         self.user_embeddings.weight.data.uniform_(-initrange, initrange)
         
     def forward(self, user_id, input_ids, attention_mask, past_key_values = None):
+        #print("now")
         ignore_index = -100
         text = input_ids
         mask = attention_mask
         batch_size = user_id.size(0)
         user_id = user_id * self.user_len
+        
         user_id_sql = torch.Tensor(user_id.unsqueeze(1).repeat(1, self.user_len).view(-1, self.user_len)).cuda()
         add_id_sql = torch.arange(0, self.user_len).cuda()
         id_sql = user_id_sql + add_id_sql
         u_emd = self.user_embeddings(id_sql)
-
+        #print("1", user_id.device, user_id_sql.device, add_id_sql.device, id_sql.device)
         w_emd = self.model.model.embed_tokens(input_ids)  # (batch_size, tgt_len, emsize)
         if past_key_values is None:
             src_emd = torch.cat([u_emd, w_emd], 1)  # (batch_size, total_len, emsize)
@@ -67,8 +64,8 @@ class PreferCodeLlama(nn.Module):
             
             loss = output.loss
             logits = output.logits
-            hidden_states = output.hidden_states
-            predictions = logits.argmax(dim=-1)
+            #hidden_states = output.hidden_states
+            #predictions = logits.argmax(dim=-1)
             
-            return loss, logits, hidden_states, predictions
+            return loss, logits
         

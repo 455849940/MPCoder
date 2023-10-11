@@ -6,6 +6,10 @@ from transformers import TrainingArguments
 @dataclass
 class train_config(TrainingArguments):
     # model params
+    enable_fsdp: bool = field(
+        default= True,
+        metadata={"help": "enable_fsdp."}
+    )
     hidden_size: int = field(
         default=4096,
         metadata={"help": "coadellam-7b config.json hidden_size."}

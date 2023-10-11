@@ -165,7 +165,7 @@ def main():
     parser = transformers.HfArgumentParser(train_config)
     args = parser.parse_args_into_dataclasses()[0]
     
-    print(args)
+    #print(args)
     
     tokenizer = LlamaTokenizer.from_pretrained(train_config.model_name_or_path)
     print(tokenizer.truncation_side)
@@ -180,9 +180,9 @@ def main():
     #---------------------------------------------------------------------------------  
     proc = processClass()
     train_data_set = proc.get_train_dataset(args,tokenizer)
-    test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
+    #test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
     args.idnum = proc.idnum
-    test_dataloader = DataLoader(test_data_set , batch_size=args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
+    test_dataloader = DataLoader(train_data_set , batch_size=args.per_device_test_batch_size, collate_fn=train_data_set.collate_batch, num_workers=4)
     #print(tokenizer.pad_token_id)
 
     # inint model
