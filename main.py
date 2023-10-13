@@ -57,6 +57,16 @@ def main():
                 "pad_token": "<PAD>",
             }
         )    
+    example_token = tokenizer.encode(" [INST] write a book")
+    print(example_token)
+    words = tokenizer.convert_ids_to_tokens(example_token)
+    print(words)
+    input()
+    #bos_token = tokenizer.eos_token_id
+    #print(bos_token)
+    #words = tokenizer.convert_ids_to_tokens(bos_token)
+    #print(words)
+    #input()
     
     # load data
     #---------------------------------------------------------------------------------  

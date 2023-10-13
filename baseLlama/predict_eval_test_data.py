@@ -1,7 +1,7 @@
 from transformers import LlamaTokenizer, LlamaForCausalLM,GenerationConfig
 import torch
 from typing import List, Literal, Optional, Tuple, TypedDict
-PATH_TO_CONVERTED_WEIGHTS = "./CodeLlama-7b-Instruct-hf"
+PATH_TO_CONVERTED_WEIGHTS = "../CodeLlama-7b-Instruct-hf"
 B_INST, E_INST = "[INST]", "[/INST]"
 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
 
@@ -86,7 +86,7 @@ def evaluate(
 
         #prompt = generate_prompt(instruction)
         #print(prompt)
-        inputs = tokenizer(instruction, return_tensors="pt")
+        inputs = tokenizer(instruction, return_tensors="pt" , batched=True)
         input_ids = inputs["input_ids"].cuda()
         #input_ids = torch.tensor(prompt).cuda()
         generation_config = GenerationConfig(
@@ -106,17 +106,28 @@ def evaluate(
                 max_new_tokens=max_new_tokens,
             )
 
-        s = generation_output.sequences[0]
+        s = generation_output.sequences
         output = tokenizer.decode(s)
-        print(output.split(E_INST)[1])
+        
+        print(len(output))
+        #print(output.split(E_INST)[1])
         return output
 
 if __name__ == "__main__":
-    instruction = "Count the number of digits and lowercase characters in a given string.\n\n### Input format:\nOne line of string input.\n\n### Output format:\n`共有?个数字，?个小写字符`，replace `?` with the corresponding numbers.\n\n### Input sample:\n\n\n```in\nhelo134ss12\n```\n\n### Output sample:\n\n\n```out\n共有5个数字，6个小写字符\n```"
-    instruction =B_SYS + "Give you a Programming problem,please provide answers in C++"+ E_SYS + instruction
-    instruction = f"{B_INST} {(instruction).strip()} {E_INST}"
-    #instruction = "<s>[INST] <<SYS>>\nProvide answers in Java\n<</SYS>>\n\nUse exception handling input mechanism to make the program more robust.\n\n## main method:\n1. Input n and create an int array of size n.\n2. Input n integers and put them into the array. When inputting, it is possible to input non-integer strings. In this case, output the exception information and then re-enter.\n3. Use `Arrays.toString` to output the contents of the array.\n\n## Input example:\n```in\n5\n1\n2\na\nb\n4\n5\n3\n\n```\n## Output example:\n```out\njava.lang.NumberFormatException: For input string: \"a\"\njava.lang.NumberFormatException: For input string: \"b\"\n[1, 2, 4, 5, 3]\n\n``` [/INST]"
-    Len = len(instruction)
-    print(instruction)
-    print("---------------------")
-    evaluate(instruction = instruction)
+    list = []
+    list.append("wirte a code ")
+    list.append("wirte a code again")
+    inputs = tokenizer(list, return_tensors="pt" , batched=True)
+    print("ok")
+    # instruction = "Count the number of digits and lowercase characters in a given string.\n\n### Input format:\nOne line of string input.\n\n### Output format:\n`共有?个数字，?个小写字符`，replace `?` with the corresponding numbers.\n\n### Input sample:\n\n\n```in\nhelo134ss12\n```\n\n### Output sample:\n\n\n```out\n共有5个数字，6个小写字符\n```"
+    # instruction =B_SYS + "Give you a Programming problem,please provide answers in C++"+ E_SYS + instruction
+    # instruction = f"{B_INST} {(instruction).strip()} {E_INST}"
+    # instructions = []
+    # instructions.append(instruction)
+    # instructions.append(instruction)
+    # #instruction = "<s>[INST] <<SYS>>\nProvide answers in Java\n<</SYS>>\n\nUse exception handling input mechanism to make the program more robust.\n\n## main method:\n1. Input n and create an int array of size n.\n2. Input n integers and put them into the array. When inputting, it is possible to input non-integer strings. In this case, output the exception information and then re-enter.\n3. Use `Arrays.toString` to output the contents of the array.\n\n## Input example:\n```in\n5\n1\n2\na\nb\n4\n5\n3\n\n```\n## Output example:\n```out\njava.lang.NumberFormatException: For input string: \"a\"\njava.lang.NumberFormatException: For input string: \"b\"\n[1, 2, 4, 5, 3]\n\n``` [/INST]"
+    # #Len = len(instruction)
+    # #print(instruction)
+    # print("---------------------")
+    # outputs = evaluate(instruction = instructions)
+    

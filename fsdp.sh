@@ -1,5 +1,5 @@
 export NCCL_P2P_DISABLE=1
-CUDA_VISIBLE_DEVICES=1,4 torchrun --nproc_per_node 2 main.py \
+CUDA_VISIBLE_DEVICES=1 torchrun --nproc_per_node 1 main.py \
     --do_train True \
     --do_eval True \
     --debug_mode False\
