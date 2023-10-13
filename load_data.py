@@ -56,11 +56,11 @@ class processClass:
             self.vid2idmap = dict()  
                 
     def get_instruction(self, input, answer,language, is_test = False):
-        instruction =B_SYS + f"Provide answers in {language}"+ E_SYS + input
+        instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + input
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
         else:
-            text = f"{B_INST} {(instruction).strip()} {E_INST} {(answer).strip()} "
+            text = f"{B_INST} {(instruction).strip()} {E_INST} ```\n{(answer).strip()}```\n "
         return text 
     
     
@@ -99,7 +99,7 @@ class processClass:
         if debug:
             data_size = len(data_list)
             if is_test:
-                up_data_size = 100
+                up_data_size = data_size
             else :
                 up_data_size = 100
             data_list = [data_list[i] for i in range(min(int(0.1*data_size), up_data_size))]

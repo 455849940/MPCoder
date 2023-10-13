@@ -45,7 +45,7 @@ class train_config(TrainingArguments):
     )
 
     best_epoch: int = field(
-        default=57,
+        default=0,
         metadata={"help": "eval best epoch."}
     ) 
     # mode generate
@@ -57,7 +57,7 @@ class train_config(TrainingArguments):
     # experiment setups
     
     output_dir: str = field(
-        default="normal", 
+        default="part_model_2", 
         metadata={"help": "output_dir"}
     )
     
@@ -78,18 +78,18 @@ class train_config(TrainingArguments):
     )   
 
     train_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/Java_programming_train.json"],
+        default_factory=lambda: ["./data/Java_part_programming/Java_programming_train.json"],
         metadata={"help": "train datasets paths."}
     )
 
 
     eval_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/Java_programming_dev.json"],
+        default_factory=lambda: ["./data/Java_part_programming/Java_programming_dev.json"],
         metadata={"help": "evaluation datasets paths."}
     )
 
     test_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/Java_programming_dev.json"],
+        default_factory=lambda: ["./data/Java_part_programming/Java_programming_test.json"],
         metadata={"help": "train datasets paths."}
     )
     # training hyperparams

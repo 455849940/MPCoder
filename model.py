@@ -17,7 +17,7 @@ class PreferCodeLlama(nn.Module):
         self.model = LlamaForCausalLM.from_pretrained(config.model_name_or_path) 
         self.model.resize_token_embeddings(self.model.model.embed_tokens.weight.size(0) + 8)
                      
-        self.user_len = 20
+        self.user_len = 10
         self.emsize = self.model.model.embed_tokens.weight.size(1)  #
         self.user_embeddings = nn.Embedding(config.idnum * self.user_len, self.emsize)
         print(">>> config.idnum = " + str(config.idnum))

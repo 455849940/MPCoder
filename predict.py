@@ -19,8 +19,7 @@ def print_trainable_parameters(model):
     for name, param in model.named_parameters():
         if param.requires_grad:
             total_params += param.numel()
-            if "user_embeddings_list" not in name:
-                print(f"Parameter name: {name}, Shape: {param.shape}")
+            print(f"Parameter name: {name}, Shape: {param.shape}")
     print(f"Total Trainable Parameters: {total_params}")
 
     
@@ -32,7 +31,7 @@ def generate(model, tokenizer, args, batch):
     max_total_seq_len = args.max_total_seq_len
     max_generate_length = args.max_generate_length
     with torch.no_grad():
-        print("start generate")
+        
         user_id = batch['user_id'].cuda()
         batch_size = user_id.size(0)
         input_ids = batch['input_ids'].cuda() #test应该只有问题而没有回答
@@ -55,10 +54,10 @@ def generate(model, tokenizer, args, batch):
         prev_pos = 0
         stop_reached = torch.tensor([False] * batch_size, device="cuda")
         #model forward 自回归生成tokens
-        print("yes")
-        print(total_len)
-        print(max_prompt_len)
-        print("-------")
+        
+        #print(total_len)
+        #print(max_prompt_len)
+        
         in_tokens = tokens[:, 0:min_prompt_len]
 
         kvcache = None
@@ -149,7 +148,7 @@ def predict(model, train_config, test_dataloader, tokenizer):
                 generation_json.append(item)
     json.dump(
         generation_json,
-        open("./out_predict/result.json", 'w'),
+        open("./out_predict/result_part.json", 'w'),
         indent=4,
         ensure_ascii=False
     )
@@ -179,17 +178,22 @@ def main():
     # load data
     #---------------------------------------------------------------------------------  
     proc = processClass()
-    train_data_set = proc.get_train_dataset(args,tokenizer)
-    #test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
+    #train_data_set = proc.get_train_dataset(args,tokenizer)
+    test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
     args.idnum = proc.idnum
-    test_dataloader = DataLoader(train_data_set , batch_size=args.per_device_test_batch_size, collate_fn=train_data_set.collate_batch, num_workers=4)
+    test_dataloader = DataLoader(test_data_set , batch_size=args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
     #print(tokenizer.pad_token_id)
 
     # inint model
     #---------------------------------------------------------------------------------
     model = PreferCodeLlama(args)
-    model = load_model_checkpoint(model,args)
+    model = load_model_checkpoint(model, 0, args)
     model = model.cuda()
+    on_gpu = all(param.is_cuda for param in model.parameters())
+    if on_gpu:
+        print("模型在 GPU 上运行。")
+    else:
+        print("模型在 CPU 上运行。")
     print_trainable_parameters(model)  
     predict(model, args, test_dataloader,tokenizer)
     # build trainer

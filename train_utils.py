@@ -36,10 +36,10 @@ def save_model_checkpoint(
         model, StateDictType.FULL_STATE_DICT, fullstate_save_policy
     ):
         cpu_state = model.state_dict()
-
-        print(f"saving process: rank {rank}  done w model state_dict\n")
+        print(f"saving process: rank {rank}  done w model state_dict")
     if rank == 0:
-        output_dir = os.path.join(cfg.output_dir, f'model_{epoch}.pt')
+        #output_dir = os.path.join(cfg.output_dir, f'model_{epoch}.pt')
+        output_dir = os.path.join(cfg.output_dir, f'model.pt')
         torch.save(cpu_state, output_dir)
         print(f"model checkpoint saved for epoch {epoch} at {output_dir}\n")
       
@@ -48,8 +48,8 @@ def save_model_checkpoint(
 def load_model_checkpoint(model, rank,cfg):
     if rank != 0:
         return
-    model_checkpoint = os.path.join(cfg.output_dir, f'model_{cfg.best_epoch}.pt')
-    model = torch.load(model_checkpoint)
+    model_checkpoint_dir = os.path.join(cfg.output_dir, f'model.pt')
+    model_checkpoint = torch.load(model_checkpoint_dir)
     model.load_state_dict(model_checkpoint)
     print(f"model checkpoint loaded ")
     return model
@@ -122,10 +122,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
         if train_config.do_eval:
             eval_ppl, eval_epoch_loss = evaluation(model, train_config, eval_dataloader, tokenizer, local_rank)
             checkpoint_start_time = time.perf_counter()
-            if train_config.save_model and eval_epoch_loss < best_val_loss and epoch > 50:
+            upp_epoch = 0 if not train_config.debug_mode else 0
+            if train_config.save_model and eval_epoch_loss < best_val_loss and epoch > upp_epoch:
                 if train_config.enable_fsdp:
                     dist.barrier()
-                save_model_checkpoint(model,train_config, epoch)
+                save_model_checkpoint(model,rank,train_config, epoch)
                 if rank==0:
                     print(" Saving the model checkpoints." + f"{epoch}")
                     print("=====================================================")                     

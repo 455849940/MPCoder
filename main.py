@@ -102,31 +102,26 @@ def main():
     
     if train_config.enable_fsdp:
         
-        # mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
-        # #model = model.to(local_rank)
-        # print("1", local_rank, rank)
-        # model = FSDP(
-        #     model,
-        #     auto_wrap_policy= wrapping_policy,
-        #     cpu_offload=None,
-        #     mixed_precision= None,
-        #     sharding_strategy=fsdp_config.sharding_strategy,
-        #     device_id=torch.cuda.current_device(),
-        #     limit_all_gathers=True,
-        #     sync_module_states= False,
-        #     param_init_fn= None,
-        # )
-        rank = dist.get_rank()
-        print(f"Start running basic DDP example on rank {rank}.")
-
-        # create model and move it to GPU with id rank
-        device_id = rank % torch.cuda.device_count()
-        model = model.to(rank)
-        print("?????")
-        #print(model.device)
-        print("AAAAAA")
-        model = DDP(model, device_ids= [device_id], output_device= device_id, find_unused_parameters=True)
-        print("finish")
+        mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
+        #model = model.to(local_rank)
+        print("1", local_rank, rank)
+        model = FSDP(
+            model,
+            auto_wrap_policy= wrapping_policy,
+            cpu_offload=None,
+            mixed_precision= mixed_precision_policy,
+            sharding_strategy=fsdp_config.sharding_strategy,
+            device_id=torch.cuda.current_device(),
+            limit_all_gathers=True,
+            sync_module_states= False,
+            param_init_fn= None,
+        )
+        # rank = dist.get_rank()
+        # print(f"Start running basic DDP example on rank {rank}.")
+        # # create model and move it to GPU with id rank
+        # device_id = rank % torch.cuda.device_count()
+        # model = model.to(rank)        
+        # model = DDP(model, device_ids= [device_id], output_device= device_id, find_unused_parameters=True)
     else:
         model = model.cuda()
     

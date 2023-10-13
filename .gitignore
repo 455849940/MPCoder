@@ -3,3 +3,5 @@ data/
 __pycache__/
 */__pycache__/
 normal/
+part_model/
+out_predict/
