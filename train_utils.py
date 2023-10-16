@@ -101,10 +101,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                     pbar.update(1)
 
                 pbar.set_description(f"Training Epoch: {epoch+1}/{train_config.num_train_epochs}, step {step}/{len(train_dataloader)} completed (loss: {loss.detach().float()})")
+                torch.cuda.empty_cache()
             pbar.close()
                 
         epoch_end_time = time.perf_counter()-epoch_start_time
-        epoch_times.append(epoch_end_time)    
+        #epoch_times.append(epoch_end_time)    
         # Reducing total_loss across all devices if there's more than one CUDA device
         if torch.cuda.device_count() > 1 and train_config.enable_fsdp:
             dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)

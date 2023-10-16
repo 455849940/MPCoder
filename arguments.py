@@ -57,7 +57,7 @@ class train_config(TrainingArguments):
     # experiment setups
     
     output_dir: str = field(
-        default="part_model_2", 
+        default="part_model_3", 
         metadata={"help": "output_dir"}
     )
     
@@ -73,7 +73,7 @@ class train_config(TrainingArguments):
     # data params
     language : str = field(default="Java",metadata={"help": "language data."})   
     problem_path: str = field(
-        default="./data/content_compelete.json",
+        default="/home/develop/dzl/PreferCodeLlama/data/content_compelete.json",
         metadata={"help": "the path to load data."}
     )   
 
@@ -89,7 +89,7 @@ class train_config(TrainingArguments):
     )
 
     test_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_part_programming/Java_programming_test.json"],
+        default_factory=lambda: ["/home/develop/dzl/PreferCodeLlama/data/Java_part_programming/Java_programming_test.json"],
         metadata={"help": "train datasets paths."}
     )
     # training hyperparams

@@ -101,7 +101,7 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
 
 if __name__ == "__main__":
   
-  reference_corpus = [["today is a happy day!"], ["happy day! is today"]]
+  reference_corpus = [["today is a happy day!"], ["  happy day! is today"]]
   translation_corpus = ["today is a happy day!", "happy day! is today"]
   result = compute_bleu(reference_corpus, translation_corpus, 4)
   print(result)

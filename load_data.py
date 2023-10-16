@@ -30,11 +30,12 @@ class TextRewardDataset(Dataset):
             attention_mask_batch = []
             labels_batch = []
             instruction_list = []
+            problem_id_batch = []
             for item in batch:
                 id_batch.append(item['user_id'])
                 instruction_list.append(item['input'])
                 labels_batch.append(item['code']) 
-            
+                problem_id_batch.append(item['problem_id'])
             encoded_inputs = self.tokenizer(instruction_list,padding=True, return_tensors='pt')
             input_ids_batch = encoded_inputs["input_ids"]
             attention_mask_batch = encoded_inputs["attention_mask"]
@@ -44,7 +45,8 @@ class TextRewardDataset(Dataset):
                 "user_id": torch.tensor(id_batch).long(),
                 "input_ids": input_ids_batch,
                 "attention_mask": attention_mask_batch,
-                "code_labels": labels_batch
+                "code_labels": labels_batch,
+                "problem_id": problem_id_batch
             }
             
     
@@ -59,7 +61,7 @@ class processClass:
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
         else:
-            text = f"{B_INST} {(instruction).strip()} {E_INST} ```\n{(answer).strip()}```\n "
+            text = f"{B_INST} {(instruction).strip()} {E_INST} ```\n{(answer).strip()}```\n </s>"
         return text 
     
     
@@ -75,9 +77,11 @@ class processClass:
                 self.idnum += 1
             
             
-            new_items['code'] = items[i]['code']
+            new_items['code'] = items[i]['code'].strip('\n') #去掉前后多余的空行
             user_vir_id = self.id2vidmap[user_id]
             new_items['user_id'] = user_vir_id
+            
+            new_items['problem_id'] = items[i]['problem_id']
             
             new_items['input'] = self.get_instruction(problem_content[i], new_items['code'], language,is_test) 
             data_list.append(new_items)

@@ -116,6 +116,23 @@ def sample_top_p(probs, p):
     return next_token
 
 
+def filte_code(text):
+    text = text.strip()
+    text = text.strip('\n')
+    substring = "```"
+    if text.find(substring) != -1: 
+        text = text.split(substring)
+        Len = len(text)
+        if Len == 1:
+            return text.strip('\n')
+        else:
+            if len(text[0]) > len(text[1]):
+                return text[0].strip('\n')
+            else:
+                return text[1].strip('\n')
+    else:
+        return text 
+    
 def predict(model, train_config, test_dataloader, tokenizer):
     """
     Evaluates the model on the given dataloader
@@ -138,14 +155,18 @@ def predict(model, train_config, test_dataloader, tokenizer):
             generation_tokens = generate(model, tokenizer, train_config, batch)
             user_id = batch['user_id']
             input_ids = batch['input_ids'] #test应该只有问题而没有回答
-            code_lables = batch['code_labels'] 
+            code_lables = batch['code_labels']
+            problem_id  = batch['problem_id'] 
             #for i in range(train_config.per_device_test_batch_size):
             #    generation_token = generation_tokens[i]
             code_generations = [tokenizer.decode(t) for t in generation_tokens]
+            
             for i in range(len(code_generations)):
                 code_generation = code_generations[i]
-                item = {"user_id":str(user_id[i]),"problem":str(tokenizer.decode(input_ids[i])),"code_reply":str(code_generation)}
+                code_generation = filte_code(code_generation)
+                item = {"user_id":str(user_id[i].item()),"problem_id":problem_id[i],"code_lables": code_lables[i],"code_reply":str(code_generation)}
                 generation_json.append(item)
+            #"problem":str(tokenizer.decode(input_ids[i])
     json.dump(
         generation_json,
         open("./out_predict/result_part.json", 'w'),

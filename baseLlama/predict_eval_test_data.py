@@ -1,105 +1,45 @@
+import os
+import sys
+
+# 获取当前文件所在的文件夹路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 获取上一级文件夹路径
+parent_dir = os.path.dirname(current_dir)
+# 将上一级文件夹路径加入到sys.path中
+sys.path.append(parent_dir)
+
 from transformers import LlamaTokenizer, LlamaForCausalLM,GenerationConfig
 import torch
+import transformers 
 from typing import List, Literal, Optional, Tuple, TypedDict
+#from PreferCodeLlama.load_data import processClass
+from load_data import processClass 
+from arguments import train_config
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+import json
+from llama_recipes.utils.memory_utils import MemoryTrace
 PATH_TO_CONVERTED_WEIGHTS = "../CodeLlama-7b-Instruct-hf"
 B_INST, E_INST = "[INST]", "[/INST]"
 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
 
-SPECIAL_TAGS = [B_INST, E_INST, "<<SYS>>", "<</SYS>>"]
-UNSAFE_ERROR = "Error: special tags are not allowed as part of the prompt."
-Role = Literal["system", "user", "assistant"]
-class Message(TypedDict):
-    role: Role
-    content: str
-Dialog = List[Message]
-
-model = LlamaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-model = model.cuda()
-tokenizer = LlamaTokenizer.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-model.config.pad_token_id = tokenizer.pad_token_id = 0  # unk
-model.config.bos_token_id = 1
-model.config.eos_token_id = 2
-
-         
-    
-
-
-def generate_prompt(dialogs: List[Dialog]):
-    prompt_tokens = []
-    unsafe_requests = []
-    for dialog in dialogs:
-
-        unsafe_requests.append(
-            any([tag in msg["content"] for tag in SPECIAL_TAGS for msg in dialog])
-        )
-        if dialog[0]["role"] == "system":
-            dialog = [
-                {
-                    "role": dialog[1]["role"],
-                    "content": B_SYS
-                    + dialog[0]["content"]
-                    + E_SYS
-                    + dialog[1]["content"],
-                }
-            ] + dialog[2:]
-        assert all([msg["role"] == "user" for msg in dialog[::2]]) and all(
-            [msg["role"] == "assistant" for msg in dialog[1::2]]
-        ), (
-            "model only supports 'system', 'user' and 'assistant' roles, "
-            "starting with 'system', then 'user' and alternating (u/a/u/a/u...)"
-        )
-        dialog_tokens: List[int] = sum(
-            [
-                tokenizer.encode(
-                    f"{B_INST} {(prompt['content']).strip()} {E_INST} {(answer['content']).strip()} ",
-                    bos=True,
-                    eos=True,
-                )
-                for prompt, answer in zip(
-                    dialog[::2],
-                    dialog[1::2],
-                )
-            ],
-            [],
-        )
-        assert (
-            dialog[-1]["role"] == "user"
-        ), f"Last message must be from user, got {dialog[-1]['role']}"
-        dialog_tokens += tokenizer.encode(
-            f"{B_INST} {(dialog[-1]['content']).strip()} {E_INST}",
-            bos=True,
-            eos=False,
-        )
-        prompt_tokens.append(dialog_tokens)
-    return prompt_tokens
-Len = 0
 def evaluate(
-            instruction,
+            model,
+            tokenizer,
             input=None,
-            temperature=0.2,
-            top_p=0.95,
-            top_k=40,
-            num_beams=4,
-            max_new_tokens=1024,
+            num_beams=1,
+            max_new_tokens=2048,
             **kwargs,
     ):
 
-        #prompt = generate_prompt(instruction)
-        #print(prompt)
-        inputs = tokenizer(instruction, return_tensors="pt" , batched=True)
-        input_ids = inputs["input_ids"].cuda()
-        #input_ids = torch.tensor(prompt).cuda()
         generation_config = GenerationConfig(
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
             num_beams=num_beams,
             **kwargs,
         )
 
         with torch.no_grad():
             generation_output = model.generate(
-                input_ids=input_ids,
+                input_ids=input,
                 generation_config=generation_config,
                 return_dict_in_generate=True,
                 output_scores=True,
@@ -107,27 +47,65 @@ def evaluate(
             )
 
         s = generation_output.sequences
-        output = tokenizer.decode(s)
-        
-        print(len(output))
+        output = tokenizer.batch_decode(s, skip_special_tokens=True)
+   
         #print(output.split(E_INST)[1])
         return output
-
+def filte_code(text):
+    text = text.split(E_INST)[1]
+    text = text.strip()
+    text = text.strip('\n')
+    substring = "```"
+    if text.find(substring) != -1: 
+        text = text.split(substring)
+        Len = len(text)
+        if Len == 1:
+            return text.strip('\n')
+        else:
+            if len(text[0]) > len(text[1]):
+                return text[0].strip('\n')
+            else:
+                return text[1].strip('\n')
+    else:
+        return text 
 if __name__ == "__main__":
-    list = []
-    list.append("wirte a code ")
-    list.append("wirte a code again")
-    inputs = tokenizer(list, return_tensors="pt" , batched=True)
-    print("ok")
-    # instruction = "Count the number of digits and lowercase characters in a given string.\n\n### Input format:\nOne line of string input.\n\n### Output format:\n`共有?个数字，?个小写字符`，replace `?` with the corresponding numbers.\n\n### Input sample:\n\n\n```in\nhelo134ss12\n```\n\n### Output sample:\n\n\n```out\n共有5个数字，6个小写字符\n```"
-    # instruction =B_SYS + "Give you a Programming problem,please provide answers in C++"+ E_SYS + instruction
-    # instruction = f"{B_INST} {(instruction).strip()} {E_INST}"
-    # instructions = []
-    # instructions.append(instruction)
-    # instructions.append(instruction)
-    # #instruction = "<s>[INST] <<SYS>>\nProvide answers in Java\n<</SYS>>\n\nUse exception handling input mechanism to make the program more robust.\n\n## main method:\n1. Input n and create an int array of size n.\n2. Input n integers and put them into the array. When inputting, it is possible to input non-integer strings. In this case, output the exception information and then re-enter.\n3. Use `Arrays.toString` to output the contents of the array.\n\n## Input example:\n```in\n5\n1\n2\na\nb\n4\n5\n3\n\n```\n## Output example:\n```out\njava.lang.NumberFormatException: For input string: \"a\"\njava.lang.NumberFormatException: For input string: \"b\"\n[1, 2, 4, 5, 3]\n\n``` [/INST]"
-    # #Len = len(instruction)
-    # #print(instruction)
-    # print("---------------------")
-    # outputs = evaluate(instruction = instructions)
+    parser = transformers.HfArgumentParser(train_config)
+    args = parser.parse_args_into_dataclasses()[0]
     
+    model = LlamaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+    model = model.cuda()
+    tokenizer = LlamaTokenizer.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+    tokenizer.padding_side = "left"
+    model.config.pad_token_id = 0
+    tokenizer.pad_token_id = 0  # unk
+    model.config.bos_token_id = 1
+    model.config.eos_token_id = 2
+    # load data
+    #---------------------------------------------------------------------------------  
+    proc = processClass()
+    #train_data_set = proc.get_train_dataset(args,tokenizer)
+    test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
+    args.idnum = proc.idnum
+    test_dataloader = DataLoader(test_data_set , batch_size= args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
+    generation_json = []
+    for step, batch in enumerate(tqdm(test_dataloader,colour="green", desc="predict Epoch", dynamic_ncols=True)):
+        with MemoryTrace() as memtrace:
+            user_id = batch['user_id']
+            input_ids = batch['input_ids'].cuda() #test应该只有问题而没有回答
+            code_lables = batch['code_labels'] 
+            problem_id  = batch['problem_id']
+            batch_output = evaluate(model, tokenizer,input_ids, pad_token_id = 0)
+            for i in range(len(batch_output)):
+                code_reply = filte_code(batch_output[i])
+                item = {"user_id":str(user_id[i].item()),"problem_id":str(problem_id[i]),"code_lables":code_lables[i],"code_reply":code_reply}
+                generation_json.append(item)
+            
+                        
+    json.dump(
+        generation_json,
+        open("./out_predict/result_part_base.json", 'w'),
+        indent=4,
+        ensure_ascii=False
+    )
+            
+            

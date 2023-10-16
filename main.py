@@ -58,10 +58,10 @@ def main():
             }
         )    
     example_token = tokenizer.encode(" [INST] write a book")
-    print(example_token)
-    words = tokenizer.convert_ids_to_tokens(example_token)
-    print(words)
-    input()
+    # print(example_token)
+    # words = tokenizer.convert_ids_to_tokens(example_token)
+    # print(words)
+    # input()
     #bos_token = tokenizer.eos_token_id
     #print(bos_token)
     #words = tokenizer.convert_ids_to_tokens(bos_token)
@@ -156,7 +156,7 @@ def main():
             weight_decay=args.weight_decay,
         )
         scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
-    
+        
         results = train(
             model,
             train_dataloader,

@@ -78,6 +78,15 @@ def main():
         )  
         [print(f'Key: {k}, Value: {v}') for k, v in results.items()]
 if __name__ == "__main__":
+    data = [10, 20, 30, 40, 50]
+    total_sum = 0
+    count = 0
+    for value in data:
+        total_sum += value
+        count += 1
+    average = total_sum / count
+    print("逐步计算的平均值:", average)
+    input()
     list = [0,1,2,3,4,5,6]
     print(list[0:2])
 
