@@ -57,7 +57,7 @@ class train_config(TrainingArguments):
     # experiment setups
     
     output_dir: str = field(
-        default="part_model_3", 
+        default="part_model", 
         metadata={"help": "output_dir"}
     )
     

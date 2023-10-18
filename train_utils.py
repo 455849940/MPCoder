@@ -8,7 +8,7 @@ from contextlib import nullcontext
 from pathlib import Path
 from pkg_resources import packaging
 
-
+from torch import nn
 import torch
 import torch.cuda.nccl as nccl
 import torch.distributed as dist
@@ -17,12 +17,21 @@ from torch.distributed.fsdp.sharded_grad_scaler import ShardedGradScaler
 from tqdm import tqdm
 from transformers import LlamaTokenizer
 from memory_utils import MemoryTrace
-from llama_recipes.policies import fpSixteen,bfSixteen_mixed, get_llama_wrapper
+from llama_recipes.policies import fpSixteen,bfSixteen_mixed
 from torch.distributed.fsdp import (
     FullyShardedDataParallel as FSDP,
     StateDictType,
     FullStateDictConfig
 )
+import functools
+
+from transformers.models.llama.modeling_llama import LlamaDecoderLayer,LlamaRMSNorm,LlamaForCausalLM
+from torch.distributed.fsdp.wrap import (
+    transformer_auto_wrap_policy,
+    size_based_auto_wrap_policy,
+    _module_wrap_policy,
+)
+
 
 fullstate_save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
 def save_model_checkpoint(
@@ -105,7 +114,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
             pbar.close()
                 
         epoch_end_time = time.perf_counter()-epoch_start_time
-        #epoch_times.append(epoch_end_time)    
+        epoch_times.append(epoch_end_time)    
         # Reducing total_loss across all devices if there's more than one CUDA device
         if torch.cuda.device_count() > 1 and train_config.enable_fsdp:
             dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)
@@ -223,11 +232,13 @@ def evaluation(model,train_config, eval_dataloader, tokenizer, local_rank):
     return eval_ppl, eval_epoch_loss
 
 
+def freeze_transformer_layers(model, num_layer):
+   for i, layer in enumerate(model.model.model.layers):
+            if i < num_layer:
+                for param in layer.parameters():
+                    param.requires_grad = False
+                    
 
-def check_frozen_layers_peft_model(model):
-     for i, layer in enumerate(model.base_model.model.model.layers):
-            for name, param in layer.named_parameters():
-                print(f"Layer {i}, parameter {name}: requires_grad = {param.requires_grad}")
                 
                 
 def setup():
@@ -322,6 +333,33 @@ def save_train_params(train_config, fsdp_config, rank):
         if rank==0:
             print(f"training params are saved in {file_name}")
 
+
+def get_llama_wrapper():
+    """we register our main layer class and use the fsdp transformer wrapping policy
+    ensures embedding layers are in the root fsdp unit for shared access and that fsdp units map to transformer layers
+    """
+    # ====   use new transformer wrapper
+
+    # llama_auto_wrap_policy = functools.partial(
+    #     transformer_auto_wrap_policy,
+    #     transformer_layer_cls={
+    #         #LlamaForCausalLM
+    #         LlamaDecoderLayer,
+    #         LlamaRMSNorm,
+    #         nn.Embedding,
+    #         nn.Linear
+    #     },
+    # )
+    llama_auto_wrap_policy = functools.partial(
+        _module_wrap_policy,
+        module_classes ={
+            LlamaDecoderLayer,
+            LlamaRMSNorm,
+            nn.Embedding,
+            nn.Linear
+        }
+    )
+    return llama_auto_wrap_policy
 
 def get_policies(cfg, rank):
     """Get the policies for mixed precision and fsdp wrapping"""

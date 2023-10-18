@@ -12,7 +12,7 @@ from model import PreferCodeLlama
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
-from train_utils import train, clear_gpu_cache, setup_environ_flags, setup, get_policies
+from train_utils import train, clear_gpu_cache, setup_environ_flags, get_policies, freeze_transformer_layers
 import torch.distributed as dist
 from configs.fsdp import fsdp_config
 from configs.wrapping import get_llama_wrapper
@@ -38,8 +38,6 @@ def main():
     torch.cuda.manual_seed(args.seed)
     torch.manual_seed(args.seed)
     if args.enable_fsdp:
-        #setup()
-        
         # torchrun specific
         local_rank = int(os.environ["LOCAL_RANK"])
         rank = int(os.environ["RANK"])
@@ -57,7 +55,7 @@ def main():
                 "pad_token": "<PAD>",
             }
         )    
-    example_token = tokenizer.encode(" [INST] write a book")
+    #example_token = tokenizer.encode(" [INST] write a book")
     # print(example_token)
     # words = tokenizer.convert_ids_to_tokens(example_token)
     # print(words)
@@ -67,7 +65,6 @@ def main():
     #words = tokenizer.convert_ids_to_tokens(bos_token)
     #print(words)
     #input()
-    
     # load data
     #---------------------------------------------------------------------------------  
     proc = processClass()
@@ -81,7 +78,7 @@ def main():
     if not train_config.enable_fsdp or rank == 0:
         print(idnum)
         print("--------")
-    
+
     train_sampler = None
     val_sampler = None
     if train_config.enable_fsdp:
@@ -101,19 +98,25 @@ def main():
     
     train_dataloader = DataLoader(train_data_set , batch_size=args.per_device_train_batch_size, collate_fn=train_data_set.collate_batch, num_workers=4,sampler=train_sampler if train_sampler else None)
     eval_dataloader = DataLoader(eval_dataset_set , batch_size=args.per_device_eval_batch_size, collate_fn=train_data_set.collate_batch, num_workers=4,sampler=val_sampler if val_sampler else None)
-    
-    
     args.idnum = idnum
     # inint model
     #---------------------------------------------------------------------------------
     model = PreferCodeLlama(args)
     # freeze pretrained model parameters   
-    
-    
-    if train_config.enable_fsdp:
-        
+      
+    if train_config.enable_fsdp:      
+        #if args.freezeLM:
+            #freeze_transformer_layers(model, 32)
+            # for name, param in model.model.named_parameters():
+            #     if name != "model.embed_tokens.weight" and name != "model.norm.weight" and name != "model.lm_head.weight":
+            #         param.requires_grad=False
+        if args.freezeLM:
+            for name, param in model.model.named_parameters():
+                    print(name)
+                    param.requires_grad=False
+                    print(param.requires_grad)
+                    print("-------------")
         mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
-        #model = model.to(local_rank)
         print("1", local_rank, rank)
         model = FSDP(
             model,
@@ -126,20 +129,25 @@ def main():
             sync_module_states= False,
             param_init_fn= None,
         )
+        
+        
+        if not train_config.enable_fsdp or rank == 0:
+            print_trainable_parameters(model)
         # rank = dist.get_rank()
         # print(f"Start running basic DDP example on rank {rank}.")
         # # create model and move it to GPU with id rank
         # device_id = rank % torch.cuda.device_count()
         # model = model.to(rank)        
         # model = DDP(model, device_ids= [device_id], output_device= device_id, find_unused_parameters=True)
-    else:
-        model = model.cuda()
+        # if args.freezeLM:
+        #         #freeze_transformer_layers(model, 32)
+        #         for name, param in model.module.model.named_parameters():
+        #             param.requires_grad=False
+        
     
-    if args.freezeLM:
-           for name, param in model.module.model.named_parameters():
-                param.requires_grad=False
-    if not train_config.enable_fsdp or rank == 0:
-        print_trainable_parameters(model)
+            
+           
+    
     
     on_gpu = all(param.is_cuda for param in model.parameters())
     if on_gpu:

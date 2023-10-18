@@ -31,7 +31,6 @@ class PreferCodeLlama(nn.Module):
         mask = attention_mask
         batch_size = user_id.size(0)
         user_id = user_id * self.user_len
-        
         user_id_sql = torch.Tensor(user_id.unsqueeze(1).repeat(1, self.user_len).view(-1, self.user_len)).cuda()
         add_id_sql = torch.arange(0, self.user_len).cuda()
         id_sql = user_id_sql + add_id_sql

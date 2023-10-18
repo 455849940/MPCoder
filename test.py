@@ -78,6 +78,12 @@ def main():
         )  
         [print(f'Key: {k}, Value: {v}') for k, v in results.items()]
 if __name__ == "__main__":
+    rank = 0
+    a = True
+    if not a or rank == 0:
+        print("yes")
+    print("hhhhhhhhh")
+    input()
     data = [10, 20, 30, 40, 50]
     total_sum = 0
     count = 0

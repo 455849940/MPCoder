@@ -1,4 +1,25 @@
-134039552 70个学生
+134039552 70个学生 
 132605952 70
 314295296 24288
 
+
+10个学生
+262754304
+[131377152][131377152]
+131377152
+87584768
+Parameter name: model.model.embed_tokens.weight, Shape: torch.Size([32024, 4096])
+Parameter name: model.model.norm.weight, Shape: torch.Size([4096])
+Parameter name: model.lm_head.weight, Shape: torch.Size([32024, 4096])
+
+
+
+87584768
+2246340673
+87583403
+
+4卡
+102400
+32894976
+
+向量个数影响
