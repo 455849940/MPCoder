@@ -78,7 +78,7 @@ def PreferLlama_eval(json_patch):
 if __name__ == "__main__":
     
     PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part.json") 
-    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part_frozzeall.json")  
+    #PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part_frozzeall.json")  
          
          
     # reference_corpus = [["today is a happy day!"]]

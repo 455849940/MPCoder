@@ -112,10 +112,12 @@ def main():
             #         param.requires_grad=False
         if args.freezeLM:
             for name, param in model.model.named_parameters():
-                    print(name)
+                    #print(name)
+                    if "lm_head" in name or "model.norm" in name: continue
                     param.requires_grad=False
-                    print(param.requires_grad)
-                    print("-------------")
+                    #print(param.requires_grad)
+        #input()
+        
         mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
         print("1", local_rank, rank)
         model = FSDP(
