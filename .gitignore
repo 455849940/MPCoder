@@ -10,5 +10,6 @@ out_predict/
 plan.txt
 canshu.txt
 result.txt
+*.md
 *.txt
 

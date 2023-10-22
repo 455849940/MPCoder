@@ -97,6 +97,8 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                     user_id = batch['user_id'].cuda()
                     input_ids = batch['input_ids'].cuda()
                     attention_mask = batch['attention_mask'].cuda()
+                #print(input_ids.shape)
+                #print(input_ids.device)
                 #print("here2")                 
                 loss, logits = model(user_id,input_ids,attention_mask, past_key_values = None)
                 loss = loss / gradient_accumulation_steps
@@ -361,7 +363,7 @@ def get_llama_wrapper():
     )
     return llama_auto_wrap_policy
 
-def get_policies(cfg, rank):
+def  get_policies(cfg, rank):
     """Get the policies for mixed precision and fsdp wrapping"""
     
     verify_bfloat_support = (

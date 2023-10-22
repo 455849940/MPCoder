@@ -36,7 +36,7 @@ class TextRewardDataset(Dataset):
                 instruction_list.append(item['input'])
                 labels_batch.append(item['code']) 
                 problem_id_batch.append(item['problem_id'])
-            encoded_inputs = self.tokenizer(instruction_list,padding=True, return_tensors='pt')
+            encoded_inputs = self.tokenizer(instruction_list,padding=True,return_tensors='pt')
             input_ids_batch = encoded_inputs["input_ids"]
             attention_mask_batch = encoded_inputs["attention_mask"]
     
@@ -84,6 +84,9 @@ class processClass:
             new_items['problem_id'] = items[i]['problem_id']
             
             new_items['input'] = self.get_instruction(problem_content[i], new_items['code'], language,is_test) 
+            text = tokenizer(new_items['input'],return_tensors='pt')
+            if text['input_ids'].shape[1] > 2048:
+                continue
             data_list.append(new_items)
             
             

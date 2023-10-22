@@ -135,14 +135,16 @@ def process_csv_to_json_tmp(open_dir,restore_dir = "./java_programming_tmp.json"
     for row in csv_reader:
         
         json_str = json.dumps(row)
-        print(json_str)
+        #print(json_str)
         
         json_data = json.loads(json_str) 
-        print("\\\\")
-        json_data["code"] = json_data["code"].replace("\\\\", "\\").replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r").replace('\\"', '\"')
-        print(json_data["code"])
+        json_data["code"] = json_data["code"].replace("\\\"", "\"").replace("\\n", "\n").replace("\\t", "\t")
+        json_data["code"] = json_data["code"].replace("\\r", "\r").replace("\\\n", "\\n").replace("\\\r", "\\r").replace("\\\t", "\\t")
+        #print("\\\\")
+        #json_data["code"] = json_data["code"].replace("\\\\", "\\").replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r").replace('\\"', '\"')
+        #print(json_data["code"])
         all_.append(json_data)
-        if len(all_) == 2  :
+        if len(all_) == 10 :
             break
     json.dump(
         all_,
@@ -159,7 +161,8 @@ def process_csv_to_json(open_dir,restore_dir):
     for row in csv_reader:
         json_str = json.dumps(row)
         json_data = json.loads(json_str)
-        json_data["code"] = json_data["code"].replace("\\\\", "\\").replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r").replace('\\"', '\"')
+        json_data["code"] = json_data["code"].replace("\\\"", "\"").replace("\\n", "\n").replace("\\t", "\t")
+        json_data["code"] = json_data["code"].replace("\\r", "\r").replace("\\\n", "\\n").replace("\\\r", "\\r").replace("\\\t", "\\t")
         all_.append(json_data)
 
     json.dump(
@@ -215,8 +218,11 @@ def filt_accepted_programming_json(json_dir, out_dir, content_dir, language):
     )
     
 #分析ac中的数据中的题目总数量、学生数量以及每个学生答题数,答题超过up_cont的学生个数
-def analyze_accepted_programming_json(ac_json_dir, up_cont):
-    
+def analyze_accepted_programming_json(ac_json_dir, up_cont,single_ac_cont = None):
+    '''
+    up_cont 答题ac数量超过up_cont
+    single_ac_cont 单题ac数量不超过single_ac_cont 为None则不分析
+    '''
     with open(ac_json_dir,'r',encoding="utf-8") as f:
         data_map =json.load(f)
     
@@ -224,11 +230,14 @@ def analyze_accepted_programming_json(ac_json_dir, up_cont):
     
     problem_count = 0
     std_count = 0
-    up_std_count = 0
-    std_ac_map = dict()
+    up_std_count = 0 #答题ac数量超过up_cont的学生数量
+    std_ac_map = dict() #某学生答对题数
     problem_map = dict()
     std_to_pro_map = defaultdict(set)    # {(stu_id,problem_id): (num)}
+    stu_submit_full_map = dict() #提交单题目数量超过single_ac_cont次的学生map
     maxx_std2pro_num = 0
+    final_need_student_map = dict() #最终符合条件的学生数量
+    final_record_count = 0#最终符合条件的记录数量
     for item in data_map:
         if item["problem_set_problem_id"] not in problem_map:
             problem_map[item["problem_set_problem_id"]] = 0
@@ -243,30 +252,48 @@ def analyze_accepted_programming_json(ac_json_dir, up_cont):
             
         std_to_pro_map[(item["user_id"], item["problem_set_problem_id"])]  += 1
         maxx_std2pro_num = max(maxx_std2pro_num, std_to_pro_map[(item["user_id"], item["problem_set_problem_id"])])
+    if single_ac_cont is not None:
+        for item in data_map:
+            if  std_to_pro_map[(item["user_id"], item["problem_set_problem_id"])] > single_ac_cont:
+                stu_submit_full_map[item["user_id"]] = True
+                
     for user_id, num in std_ac_map.items():    
-        if num >= up_cont:
+        if num >= up_cont and user_id not in stu_submit_full_map:
             up_std_count += 1
-
+            final_need_student_map[user_id] = True
+    for item in data_map:
+        if item["user_id"] in final_need_student_map:
+            final_record_count += 1
+    
+    
+        
     print("-----------------------------------------------------------------------------")
     print("total problem count = " + str(problem_count))
     print("total student count = " + str(std_count))
-    print("accomplete "+str(up_cont)+ "nums |upper student count = " + str(up_std_count))
+    print("accomplete "+str(up_cont)+ f"nums  and less {single_ac_cont} count | student count = " + str(up_std_count))
+    print("finally record number = "+str(final_record_count))
     print("maxx_std2pro_num = "+str(maxx_std2pro_num))
     print("-----------------------------------------------------------------------------")
 
 
 #生成对应语言的训练集、dev和测试集合
-def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, test_out_dir, ratio,up_cont,need_std_cont = None):
-    
+def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, test_out_dir, ratio,up_cont,single_ac_cont=None ,need_std_cont = None):
+    '''
+    ratio train占比
+    up_cont 学生答题超过up_cont
+    single_ac_cont 学生单题ac数不超过single_up_cont
+    need_std_cont 需要的学生数量 全量的话为None
+    '''
     with open(ac_json_dir,'r',encoding="utf-8") as f:
         data_map =json.load(f)
     print(ac_json_dir+" have num:"+str(len(data_map)))
     
  
     up_std_count = 0
-    std_ac_map = dict()
+    std_ac_map = dict() # {(stu_id): (num)} #某个学生的做题总数
     stdApro_map = defaultdict(set)    # {(stu_id,problem_id): (num)} #某个学生的某题的提交次数
     can_student_id2pnum_map = dict() #满足条件的学生id对应的题目数量
+    stu_submit_full_map = dict() #提交单题目数量超过single_ac_cont次的学生map
     for item in data_map:
         if (item["user_id"], item["problem_set_problem_id"]) not in stdApro_map:
             if item["user_id"] not in std_ac_map:
@@ -276,6 +303,11 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
             
         stdApro_map[(item["user_id"], item["problem_set_problem_id"])]  += 1
     
+    if single_ac_cont is not None:
+        for item in data_map:
+            if  stdApro_map[(item["user_id"], item["problem_set_problem_id"])] > single_ac_cont:
+                stu_submit_full_map[item["user_id"]] = True
+                
     
     std_cont_in_train_map = dict()           # stu_id被选入训练集的问题的个数
     std_cont_in_dev_map = dict()           # stu_id被选入dev的问题的个数              
@@ -288,7 +320,10 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
     #二次过滤学生数量
     now_std_num = 0
     for user_id, num in std_ac_map.items(): 
-           
+        if single_ac_cont is not None:
+            if user_id in stu_submit_full_map:
+                continue
+            
         if num >= up_cont:
             up_std_count += 1
             can_student_id2pnum_map[user_id] = num
@@ -298,13 +333,17 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
         if need_std_cont is not None:
             if now_std_num == need_std_cont:
                 break            
-    print("now_std_num = " + str(now_std_num))
+    print("now_std_num (statis up_cont and single number) = " + str(now_std_num))
+    
+    record_number = 0
     for item in data_map:
         user_id = item["user_id"]
         problem_id = item["problem_set_problem_id"]
-        if user_id not in std_cont_in_train_map: #过滤小于upcont的学生id
+        if user_id not in std_cont_in_train_map: #过滤小于upcont的学生id 过滤单题ac提交数超过 single_ac_cont
             continue
-        
+        #if user_id in stu_submit_full_map: #
+        #    continue
+        record_number += 1
         if (user_id, problem_id) in train_stdApro_map:
             train.append(item) 
             continue
@@ -326,11 +365,12 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
             
         else:
             test.append(item)
-            
+    
+    print(f"totoal record = {record_number}")        
     print("total train count = " + str(len(train)))
     print("total dev count = " + str(len(dev)))
     print("total test count = " + str(len(test)))
- 
+    
 
     json.dump(
         train,
@@ -355,8 +395,8 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
 def process_to_json(content_dir, lanauage, open_csv_dir, restore_json_dir, filt_ac_dir, train_dir, dev_dir, test_dir):
     process_csv_to_json(open_csv_dir, restore_json_dir)
     filt_accepted_programming_json(restore_json_dir, filt_ac_dir, content_dir, lanauage)
-    analyze_accepted_programming_json(filt_ac_dir,10)
-    produce_accepted_programming_json(filt_ac_dir,train_dir,dev_dir,test_dir, 0.8, 10, None)
+    analyze_accepted_programming_json(filt_ac_dir,20, 3)
+    produce_accepted_programming_json(filt_ac_dir,train_dir,dev_dir,test_dir, 0.8, 20,3, None)
              
 #导出指定problem_id的记录           
 def  get_problem_json(content_dir, id_list, out_content_dir):
@@ -467,16 +507,14 @@ def test_format_process_csv_to_json(open_dir,restore_dir = "./java_programming_f
     csv_reader = csv.DictReader(csv_file)
     all_ = []
     for row in csv_reader:
-        
         json_str = json.dumps(row)
-        print(json_str)
-        input()
         json_data = json.loads(json_str) 
-        print("\\\\")
-        json_data["code"] = json_data["code"].replace("\\\\", "\\").replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r").replace('\\"', '\"')
-        print(json_data["code"])
+        if json_data["language"] != "Java" : continue
+        #if json_data["submission_id"] != "1274520912634765312": continue
+        json_data["code"] = json_data["code"].replace("\\\"", "\"").replace("\\n", "\n").replace("\\t", "\t")
+        json_data["code"] = json_data["code"].replace("\\r", "\r").replace("\\\n", "\\n").replace("\\\r", "\\r").replace("\\\t", "\\t")
         all_.append(json_data)
-        if len(all_) == 2  :
+        if len(all_) == 120  :
             break
     json.dump(
         all_,
@@ -495,11 +533,12 @@ if __name__ == "__main__":
     #process_to_json(content_dir,"Java",open_Java_dir,restore_Java_dir,filt_ac_Java_dir,Java_train_dir,Java_dev_dir,Java_test_dir)
     #process_to_json(content_dir,"C#",open_Csharp_dir,restore_Csharp_dir,filt_ac_Csharp_dir,Csharp_train_dir,Csharp_dev_dir,Csharp_test_dir)
     #process_to_json(content_dir,"Python",open_Python_dir,restore_Python_dir,filt_ac_Python_dir,Python_train_dir,Python_dev_dir,Python_test_dir)
-    #process_to_json(content_dir,"PHP",open_PHP_dir,restore_PHP_dir,filt_ac_PHP_dir,PHP_train_dir,PHP_dev_dir,PHP_test_dir)
    
     #form_ac_json_get_use_content(filt_ac_Java_dir, filt_ac_Csharp_dir, filt_ac_Cpp_dir, filt_ac_Python_dir, content_dir)
     #process_to_json(content_dir,"Java",open_Java_dir,restore_Java_dir,filt_ac_Java_dir,Java_train_dir,Java_dev_dir,Java_test_dir)
-    #produce_accepted_programming_json(filt_ac_Java_dir,train_part_dir,dev_part_dir,test_part_dir, 0.8, 10, 10)
+    produce_accepted_programming_json(filt_ac_Java_dir,train_part_dir,dev_part_dir,test_part_dir, 0.8, 20, 3, 100) #100个学生
+    #produce_accepted_programming_json(filt_ac_Java_dir,Java_train_dir,Java_dev_dir,Java_test_dir, 0.8, 20, 3, None) #全量
     
+    #test_format_process_csv_to_json(open_Java_dir)
     
-    test_format_process_csv_to_json(open_Java_dir)
+    #analyze_accepted_programming_json(filt_ac_Java_dir,20, 3)

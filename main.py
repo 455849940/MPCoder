@@ -55,6 +55,11 @@ def main():
                 "pad_token": "<PAD>",
             }
         )    
+    # input_ids = tokenizer('i am iron man',return_tensors='pt')
+    
+    # print(input_ids['input_ids'])
+    # print(input_ids['input_ids'].shape[1])
+    # input()
     #example_token = tokenizer.encode(" [INST] write a book")
     # print(example_token)
     # words = tokenizer.convert_ids_to_tokens(example_token)
@@ -113,17 +118,18 @@ def main():
         if args.freezeLM:
             for name, param in model.model.named_parameters():
                     #print(name)
-                    if "lm_head" in name or "model.norm" in name: continue
+                    #if "lm_head" in name or "model.norm" in name: continue
+                    if "model.embed_tokens" in name: continue
                     param.requires_grad=False
                     #print(param.requires_grad)
         #input()
-        
+        fsdp_config.use_fp16 = True
         mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
         print("1", local_rank, rank)
         model = FSDP(
             model,
             auto_wrap_policy= wrapping_policy,
-            cpu_offload=None,
+            cpu_offload=None, #CPUOffload(offload_params=True)
             mixed_precision= mixed_precision_policy,
             sharding_strategy=fsdp_config.sharding_strategy,
             device_id=torch.cuda.current_device(),
