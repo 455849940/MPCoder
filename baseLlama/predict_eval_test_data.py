@@ -51,6 +51,7 @@ def evaluate(
    
         #print(output.split(E_INST)[1])
         return output
+    
 def filte_code(text):
     text = text.split(E_INST)[1]
     text = text.strip()
@@ -68,7 +69,8 @@ def filte_code(text):
                 return text[1].strip('\n')
     else:
         return text 
-if __name__ == "__main__":
+    
+def predict_eval_test_data():
     parser = transformers.HfArgumentParser(train_config)
     args = parser.parse_args_into_dataclasses()[0]
     
@@ -103,9 +105,63 @@ if __name__ == "__main__":
                         
     json.dump(
         generation_json,
-        open("./out_predict/result_part_base.json", 'w'),
+        open("./out_predict/result_part_base100.json", 'w'),
         indent=4,
         ensure_ascii=False
     )
+
+def get_instruction(input, language, is_test = False):
+        instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + input
+        if is_test:
+            text = f"{B_INST} {(instruction).strip()} {E_INST}"
+       
+        return text 
+ 
+ 
+def load_json_data(data_path):
+    #print("loading text-score dataset from: \n   {}".format(data_path))
+    data_list = []
+    with open(data_path, 'r') as file:
+        for line in file:
+            # 逐行解析JSON对象
+            data = json.loads(line)
+            data_list.append(data)
+    return data_list
+       
+def generate_humeval_data(data_path):
+    data_list = load_json_data(data_path)
+    parser = transformers.HfArgumentParser(train_config)
+    args = parser.parse_args_into_dataclasses()[0]
+    
+    model = LlamaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+    model = model.cuda()
+    tokenizer = LlamaTokenizer.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+    tokenizer.padding_side = "left"
+    model.config.pad_token_id = 0
+    tokenizer.pad_token_id = 0  # unk
+    model.config.bos_token_id = 1
+    model.config.eos_token_id = 2
+    # load data
+    #---------------------------------------------------------------------------------  
+    generation_json = []
+    for item in data_list:
+        input = item['prompt']
+        input_ids = get_instruction(input,language="Java",is_test=True)
+        task_id = item['task_id']
+        batch_output = evaluate(model, tokenizer,input_ids, pad_token_id = 0)
+        code_reply = filte_code(batch_output)
+        item = {"task_id":task_id,"generation":code_reply}
+        generation_json.append(item)
+    
+    with open("./out_predict/humeval_java_base.json", 'w') as file:
+        for item in generation_json:
+            json.dump(item, file)
+            file.write('\n')
+        
+        
+    
+if __name__ == "__main__":
+    #predict_eval_test_data()
+    generate_humeval_data("./humaneval/humaneval_java.jsonl")
             
             

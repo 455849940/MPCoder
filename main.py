@@ -47,7 +47,7 @@ def main():
         torch.cuda.set_device(local_rank)
         clear_gpu_cache(local_rank)
         setup_environ_flags(rank)
-    #print(args)
+    print(args)
     
     tokenizer = LlamaTokenizer.from_pretrained(train_config.model_name_or_path)
     tokenizer.add_special_tokens(
@@ -119,11 +119,11 @@ def main():
             for name, param in model.model.named_parameters():
                     #print(name)
                     #if "lm_head" in name or "model.norm" in name: continue
-                    if "model.embed_tokens" in name: continue
+                    #if "model.embed_tokens" in name: continue
                     param.requires_grad=False
                     #print(param.requires_grad)
         #input()
-        fsdp_config.use_fp16 = True
+        #fsdp_config.use_fp16 = True
         mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
         print("1", local_rank, rank)
         model = FSDP(

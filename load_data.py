@@ -85,7 +85,7 @@ class processClass:
             
             new_items['input'] = self.get_instruction(problem_content[i], new_items['code'], language,is_test) 
             text = tokenizer(new_items['input'],return_tensors='pt')
-            if text['input_ids'].shape[1] > 2048:
+            if is_test is False and text['input_ids'].shape[1] > 2048:
                 continue
             data_list.append(new_items)
             

@@ -112,8 +112,8 @@ def evaluate(
         return output
 
 if __name__ == "__main__":
-    instruction = "Count the number of digits and lowercase characters in a given string.\n\n### Input format:\nOne line of string input.\n\n### Output format:\n`共有?个数字，?个小写字符`，replace `?` with the corresponding numbers.\n\n### Input sample:\n\n\n```in\nhelo134ss12\n```\n\n### Output sample:\n\n\n```out\n共有5个数字，6个小写字符\n```"
-    instruction =B_SYS + "Give you a Programming problem,please provide answers in C++"+ E_SYS + instruction
+    instruction = "import java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    /**\n    Check if in given list of numbers, are any two numbers closer to each other than given threshold.\n    >>> hasCloseElements(Arrays.asList(1.0, 2.0, 3.0), 0.5)\n    false\n    >>> hasCloseElements(Arrays.asList(1.0, 2.8, 3.0, 4.0, 5.0, 2.0), 0.3)\n    true\n     */\n    public boolean hasCloseElements(List<Double> numbers, double threshold) {\n"
+    instruction =B_SYS + "Give you a Programming problem,please provide answers in Java"+ E_SYS + instruction
     instruction = f"{B_INST} {(instruction).strip()} {E_INST}"
     #instruction = " [INST] <<SYS>>\nProvide answers in Java\n<</SYS>>\n\nUse exception handling input mechanism to make the program more robust.\n\n## main method:\n1. Input n and create an int array of size n.\n2. Input n integers and put them into the array. When inputting, it is possible to input non-integer strings. In this case, output the exception information and then re-enter.\n3. Use `Arrays.toString` to output the contents of the array.\n\n## Input example:\n```in\n5\n1\n2\na\nb\n4\n5\n3\n\n```\n## Output example:\n```out\njava.lang.NumberFormatException: For input string: \"a\"\njava.lang.NumberFormatException: For input string: \"b\"\n[1, 2, 4, 5, 3]\n\n``` [/INST]"
     Len = len(instruction)
