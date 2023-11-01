@@ -63,16 +63,22 @@ def generate(model, tokenizer, args, batch):
         kvcache = None
         for cur_pos in range(min_prompt_len, total_len):
             #print(cur_pos)
-            modeling_outputs = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
-            logits = modeling_outputs.logits
-            kvcache = modeling_outputs.past_key_values
-            
-            if args.temperature > 0:
-                probs = torch.softmax(logits[:, -1] / args.temperature, dim=-1)
-                next_token = sample_top_p(probs, args.top_p)
+            if args.choose_model_name == "perfer_Base":
+                modeling_outputs = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
+                logits = modeling_outputs.logits
+                kvcache = modeling_outputs.past_key_values
+                
+                if args.temperature > 0:
+                    probs = torch.softmax(logits[:, -1] / args.temperature, dim=-1)
+                    next_token = sample_top_p(probs, args.top_p)
+                else:
+                    next_token = torch.argmax(logits[:, -1], dim=-1)
             else:
-                next_token = torch.argmax(logits[:, -1], dim=-1)
-
+                modeling_outputs, P_final = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
+                #logits = modeling_outputs.logits
+                kvcache = modeling_outputs.past_key_values
+                next_token = torch.argmax(P_final[:, -1], dim=-1)
+                
             next_token = next_token.reshape(-1)
             # only replace token if prompt has already been generated
             
@@ -167,12 +173,20 @@ def predict(model, train_config, test_dataloader, tokenizer):
                 item = {"user_id":str(user_id[i].item()),"problem_id":problem_id[i],"code_lables": code_lables[i],"code_reply":str(code_generation)}
                 generation_json.append(item)
             #"problem":str(tokenizer.decode(input_ids[i])
-    json.dump(
-        generation_json,
-        open("./out_predict/result_part.json", 'w'),
-        indent=4,
-        ensure_ascii=False
-    )
+    if train_config.choose_model_name == "perfer_Base":
+        json.dump(
+            generation_json,
+            open("./out_predict/result_part.json", 'w'),
+            indent=4,
+            ensure_ascii=False
+        )
+    else:
+        json.dump(
+            generation_json,
+            open("./out_predict/perfer_Aug_part.json", 'w'),
+            indent=4,
+            ensure_ascii=False
+        )
         
                 
    

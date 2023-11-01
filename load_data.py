@@ -97,7 +97,7 @@ class processClass:
         #print("loading text-score dataset from: \n   {}".format(data_path))
         with open(data_path, 'r') as f:
             data_list = json.load(f)
-
+            #data_list = sorted(data_list, key=lambda x: x["user_id"])
         return data_list
 
     #获取部分还是全部数据
@@ -123,6 +123,10 @@ class processClass:
         if data_path[-4:] == 'json':
             data_list = self.load_json_data(data_path)
         problem_list = self.load_json_data(problem_path)
+        
+        if is_test == False:
+            data_list = sorted(data_list, key=lambda x: x["user_id"]) #按id排序训练
+            
         problem_map = dict()
         for item in problem_list:
             problem_map[item['id']] = item['english_content']

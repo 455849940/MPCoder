@@ -117,7 +117,6 @@ def get_instruction(input, language, is_test = False):
        
         return text 
  
- 
 def load_json_data(data_path):
     #print("loading text-score dataset from: \n   {}".format(data_path))
     data_list = []
@@ -144,16 +143,20 @@ def generate_humeval_data(data_path):
     # load data
     #---------------------------------------------------------------------------------  
     generation_json = []
-    for item in data_list:
+    for item in tqdm(data_list):
         input = item['prompt']
-        input_ids = get_instruction(input,language="Java",is_test=True)
+        text = get_instruction(input,language="Java",is_test=True)
+        text = tokenizer(text,return_tensors='pt')
+        input_ids = text['input_ids'].cuda()
         task_id = item['task_id']
         batch_output = evaluate(model, tokenizer,input_ids, pad_token_id = 0)
-        code_reply = filte_code(batch_output)
-        item = {"task_id":task_id,"generation":code_reply}
-        generation_json.append(item)
+        for i in range(len(batch_output)):
+            #code_reply = filte_code(batch_output[i])
+            code_reply = batch_output[i]
+            item = {"task_id":task_id,"generation":code_reply}
+            generation_json.append(item)
     
-    with open("./out_predict/humeval_java_base.json", 'w') as file:
+    with open("./out_predict/humeval_java_base_2.json", 'w') as file:
         for item in generation_json:
             json.dump(item, file)
             file.write('\n')
@@ -162,6 +165,6 @@ def generate_humeval_data(data_path):
     
 if __name__ == "__main__":
     #predict_eval_test_data()
-    generate_humeval_data("./humaneval/humaneval_java.jsonl")
+    generate_humeval_data("./humaneval/humaneval_java_2.jsonl")
             
             

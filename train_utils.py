@@ -62,7 +62,18 @@ def load_model_checkpoint(model, rank,cfg):
     model.load_state_dict(model_checkpoint)
     print(f"model checkpoint loaded ")
     return model
-    
+ 
+ 
+def gather_all_with_local_grad(tensor, dim=0):
+    local_rank = torch.distributed.get_rank()
+
+    with torch.no_grad():
+        all_tensors = [torch.zero_like(tensor) for _ in range(dist.get_world_size())]
+        torch.distributed.all_gather(all_tensors, tensor)
+    all_tensors[local_rank] = tensor
+
+    return torch.stack(all_tensors, dim=dim)
+   
 def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_scheduler, gradient_accumulation_steps, train_config, fsdp_config=None, local_rank=None, rank=None):
     """
     Trains the model on the given dataloader
@@ -100,7 +111,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                 #print(input_ids.shape)
                 #print(input_ids.device)
                 #print("here2")                 
-                loss, logits = model(user_id,input_ids,attention_mask, past_key_values = None)
+                loss = model(user_id,input_ids,attention_mask, past_key_values = None)
                 loss = loss / gradient_accumulation_steps
                 total_loss += loss.detach().float()
                 #print("here3")
@@ -190,7 +201,7 @@ def evaluation(model,train_config, eval_dataloader, tokenizer, local_rank):
     if train_config.enable_fsdp:
         world_size = int(os.environ["WORLD_SIZE"])  
     model.eval()
-    eval_preds = []
+  
     eval_loss = 0.0  # Initialize evaluation loss
     with MemoryTrace() as memtrace:
         for step, batch in enumerate(tqdm(eval_dataloader,colour="green", desc="evaluating Epoch", dynamic_ncols=True)):
@@ -206,13 +217,13 @@ def evaluation(model,train_config, eval_dataloader, tokenizer, local_rank):
             # Ensure no gradients are computed for this scope to save memory
             with torch.no_grad():
                 # Forward pass and compute loss
-                loss, logits = model(user_id,input_ids,attention_mask, past_key_values = None)
+                loss = model(user_id,input_ids,attention_mask, past_key_values = None)
                 eval_loss += loss.detach().float()
             # Decode predictions and add to evaluation predictions list
-            preds = torch.argmax(logits, -1)
-            eval_preds.extend(
-                tokenizer.batch_decode(preds.detach().cpu().numpy(), skip_special_tokens=True)
-            )
+            #preds = torch.argmax(logits, -1)
+            #eval_preds.extend(
+            #    tokenizer.batch_decode(preds.detach().cpu().numpy(), skip_special_tokens=True)
+            #)
     
     # If there's more than one CUDA device, reduce evaluation loss across all devices
     if torch.cuda.device_count() > 1 and train_config.enable_fsdp:

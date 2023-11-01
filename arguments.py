@@ -5,6 +5,12 @@ from transformers import TrainingArguments
 
 @dataclass
 class train_config(TrainingArguments):
+    
+    choose_model_name: str = field(
+        default="perfer_Base", 
+        metadata={"help": "perfer_Base perfer_Aug"}
+    )
+    
     # model params
     enable_fsdp: bool = field(
         default= True,
@@ -78,18 +84,18 @@ class train_config(TrainingArguments):
     )   
 
     train_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_part_programming100/Java_programming_train.json"],
+        default_factory=lambda: ["./data/Java_part_programming30/Java_programming_train.json"],
         metadata={"help": "train datasets paths."}
     )
 
 
     eval_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_part_programming100/Java_programming_dev.json"],
+        default_factory=lambda: ["./data/Java_part_programming30/Java_programming_dev.json"],
         metadata={"help": "evaluation datasets paths."}
     )
 
     test_data_path: List[str] = field(
-        default_factory=lambda: ["/home/develop/dzl/PreferCodeLlama/data/Java_part_programming100/Java_programming_test.json"],
+        default_factory=lambda: ["/home/develop/dzl/PreferCodeLlama/data/Java_part_programming30/Java_programming_test.json"],
         metadata={"help": "train datasets paths."}
     )
     # training hyperparams

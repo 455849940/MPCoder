@@ -62,9 +62,9 @@ class PreferCodeLlama(nn.Module):
             )
             
             loss = output.loss
-            logits = output.logits
+            #logits = output.logits
             #hidden_states = output.hidden_states
             #predictions = logits.argmax(dim=-1)
             
-            return loss, logits
+            return loss
         
