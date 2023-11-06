@@ -26,6 +26,7 @@ from torch.distributed.fsdp import (
 import functools
 
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer,LlamaRMSNorm,LlamaForCausalLM
+from model_aug import MLP
 from torch.distributed.fsdp.wrap import (
     transformer_auto_wrap_policy,
     size_based_auto_wrap_policy,
@@ -57,10 +58,12 @@ def save_model_checkpoint(
 def load_model_checkpoint(model, rank,cfg):
     if rank != 0:
         return
+    
     model_checkpoint_dir = os.path.join(cfg.output_dir, f'model.pt')
+    print(f"start model checkpoint loaded in {model_checkpoint_dir}")
     model_checkpoint = torch.load(model_checkpoint_dir)
     model.load_state_dict(model_checkpoint)
-    print(f"model checkpoint loaded ")
+    print(f"model checkpoint loaded in {model_checkpoint_dir}")
     return model
  
  
@@ -91,15 +94,24 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
     checkpoint_times = []
     results = {}
     best_val_loss = float("inf")
+    if train_config.continue_train == "True":
+        eval_ppl, eval_epoch_loss = evaluation(model, train_config, eval_dataloader, tokenizer, local_rank)
+        best_val_loss = eval_epoch_loss
+        if rank==0:
+            print(f"continue_trian now best_val_loss ininit:{best_val_loss}")
+    
+                    
     for epoch in range(int(train_config.num_train_epochs)):
         epoch_start_time = time.perf_counter()
         with MemoryTrace() as memtrace:
             model.train()
             total_loss = 0.0
+            total_para = 0.0
             total_length = len(train_dataloader)//gradient_accumulation_steps
             pbar = tqdm(colour="blue", desc=f"Training Epoch: {epoch+1}", total=total_length, dynamic_ncols=True)
             for step, batch in enumerate(train_dataloader):
                 #print("here1")
+                total_para = 0.0
                 if train_config.enable_fsdp:
                     user_id = batch['user_id'].to(local_rank)
                     input_ids = batch['input_ids'].to(local_rank)
@@ -108,13 +120,14 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                     user_id = batch['user_id'].cuda()
                     input_ids = batch['input_ids'].cuda()
                     attention_mask = batch['attention_mask'].cuda()
-                #print(input_ids.shape)
-                #print(input_ids.device)
-                #print("here2")                 
-                loss = model(user_id,input_ids,attention_mask, past_key_values = None)
+                         
+                result = model(user_id,input_ids,attention_mask, past_key_values = None)
+              
+                loss = result["loss"]
                 loss = loss / gradient_accumulation_steps
                 total_loss += loss.detach().float()
-                #print("here3")
+                if train_config.choose_model_name == "perfer_Aug":
+                    total_para += result["para"]
                 # regular backpropagation when fp16 is not used
                 loss.backward()
                 if (step + 1) % gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
@@ -125,12 +138,17 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                 pbar.set_description(f"Training Epoch: {epoch+1}/{train_config.num_train_epochs}, step {step}/{len(train_dataloader)} completed (loss: {loss.detach().float()})")
                 torch.cuda.empty_cache()
             pbar.close()
-                
+            
         epoch_end_time = time.perf_counter()-epoch_start_time
         epoch_times.append(epoch_end_time)    
         # Reducing total_loss across all devices if there's more than one CUDA device
         if torch.cuda.device_count() > 1 and train_config.enable_fsdp:
             dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)
+            if train_config.choose_model_name == "perfer_Aug":
+                dist.all_reduce(total_para, op=dist.ReduceOp.SUM)
+                if rank == 0:
+                    print(f"Training Epoch: {epoch+1} :para is {total_para.item()}")
+            
         train_epoch_loss = total_loss / len(train_dataloader)
         if train_config.enable_fsdp:
             train_epoch_loss = train_epoch_loss/world_size
@@ -145,7 +163,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
         if train_config.do_eval:
             eval_ppl, eval_epoch_loss = evaluation(model, train_config, eval_dataloader, tokenizer, local_rank)
             checkpoint_start_time = time.perf_counter()
-            upp_epoch = 0 if not train_config.debug_mode else 0
+            upp_epoch = -1 if not train_config.debug_mode else 0
             if train_config.save_model and eval_epoch_loss < best_val_loss and epoch > upp_epoch:
                 if train_config.enable_fsdp:
                     dist.barrier()
@@ -203,6 +221,7 @@ def evaluation(model,train_config, eval_dataloader, tokenizer, local_rank):
     model.eval()
   
     eval_loss = 0.0  # Initialize evaluation loss
+    
     with MemoryTrace() as memtrace:
         for step, batch in enumerate(tqdm(eval_dataloader,colour="green", desc="evaluating Epoch", dynamic_ncols=True)):
             if train_config.enable_fsdp:
@@ -217,7 +236,8 @@ def evaluation(model,train_config, eval_dataloader, tokenizer, local_rank):
             # Ensure no gradients are computed for this scope to save memory
             with torch.no_grad():
                 # Forward pass and compute loss
-                loss = model(user_id,input_ids,attention_mask, past_key_values = None)
+                result = model(user_id,input_ids,attention_mask, past_key_values = None)
+                loss = result["loss"]
                 eval_loss += loss.detach().float()
             # Decode predictions and add to evaluation predictions list
             #preds = torch.argmax(logits, -1)
@@ -347,7 +367,7 @@ def save_train_params(train_config, fsdp_config, rank):
             print(f"training params are saved in {file_name}")
 
 
-def get_llama_wrapper():
+def get_llama_wrapper(cfg):
     """we register our main layer class and use the fsdp transformer wrapping policy
     ensures embedding layers are in the root fsdp unit for shared access and that fsdp units map to transformer layers
     """
@@ -363,15 +383,27 @@ def get_llama_wrapper():
     #         nn.Linear
     #     },
     # )
-    llama_auto_wrap_policy = functools.partial(
-        _module_wrap_policy,
-        module_classes ={
-            LlamaDecoderLayer,
-            LlamaRMSNorm,
-            nn.Embedding,
-            nn.Linear
-        }
-    )
+    if cfg.choose_model_name =="perfer_Base": 
+        llama_auto_wrap_policy = functools.partial(
+            _module_wrap_policy,
+            module_classes ={
+                LlamaDecoderLayer,
+                LlamaRMSNorm,
+                nn.Embedding,
+                nn.Linear
+            }
+        )
+    else:
+        llama_auto_wrap_policy = functools.partial(
+            _module_wrap_policy,
+            module_classes ={
+                LlamaDecoderLayer,
+                LlamaRMSNorm,
+                nn.Embedding,
+                nn.Linear,
+                #MLP
+            }
+        )
     return llama_auto_wrap_policy
 
 def  get_policies(cfg, rank):
@@ -403,5 +435,5 @@ def  get_policies(cfg, rank):
                 print(f"FP16 enabled")
         else:
             print(f"bFloat16 support not present. Using FP32, and not mixed precision")
-    wrapping_policy = get_llama_wrapper()
+    wrapping_policy = get_llama_wrapper(cfg)
     return mixed_precision_policy, wrapping_policy

@@ -1,5 +1,5 @@
 export NCCL_P2P_DISABLE=1
-CUDA_VISIBLE_DEVICES=1,2,4,7 torchrun --master_port=65530 --nproc_per_node 4 main.py \
+CUDA_VISIBLE_DEVICES=2,5 torchrun --master_port=65530 --nproc_per_node 2 main.py \
     --do_train True \
     --do_eval True \
     --debug_mode False\

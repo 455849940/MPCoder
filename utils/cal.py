@@ -8,8 +8,8 @@ def load_json_data(data_path):
             data_list = json.load(f)
 
         return data_list
-def baseline_eval():
-    code_reply_data = load_json_data("/home/develop/dzl/PreferCodeLlama/baseLlama/out_predict/result_part_base100.json")
+def baseline_eval(baseline_path):
+    code_reply_data = load_json_data(baseline_path)
     epoch = 0
     total_val = 0.0
     rouge_map = {
@@ -76,8 +76,9 @@ def PreferLlama_eval(json_patch):
     for (k, v) in rouge_map.items():
          print('{} {:7.4f}'.format(k, v))
 if __name__ == "__main__":
-    #baseline_eval()
-    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part.json") 
+    #baseline_eval("/home/develop/dzl/PreferCodeLlama/baseLlama/out_predict/result_base_30.json")
+    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/augT_result_part50.json") 
+    
     #PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part_frozzeall.json")  
          
          

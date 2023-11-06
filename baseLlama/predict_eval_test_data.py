@@ -70,7 +70,7 @@ def filte_code(text):
     else:
         return text 
     
-def predict_eval_test_data():
+def predict_eval_test_data(out_predict__path):
     parser = transformers.HfArgumentParser(train_config)
     args = parser.parse_args_into_dataclasses()[0]
     
@@ -105,7 +105,7 @@ def predict_eval_test_data():
                         
     json.dump(
         generation_json,
-        open("./out_predict/result_part_base100.json", 'w'),
+        open(out_predict__path, 'w'),
         indent=4,
         ensure_ascii=False
     )
@@ -164,7 +164,7 @@ def generate_humeval_data(data_path):
         
     
 if __name__ == "__main__":
-    #predict_eval_test_data()
-    generate_humeval_data("./humaneval/humaneval_java_2.jsonl")
+    predict_eval_test_data(out_predict__path = "./out_predict/result_base_30.json")
+    #generate_humeval_data("./humaneval/humaneval_java_2.jsonl")
             
             

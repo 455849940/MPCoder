@@ -8,6 +8,8 @@ import transformers
 from transformers import LlamaTokenizer,Trainer
 from load_data import processClass
 from model import PreferCodeLlama
+from model_aug import PreferAugCodeLlama
+from model_aug_t import PreferAugTCodeLlama
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
@@ -73,12 +75,16 @@ def generate(model, tokenizer, args, batch):
                     next_token = sample_top_p(probs, args.top_p)
                 else:
                     next_token = torch.argmax(logits[:, -1], dim=-1)
-            else:
+            elif args.choose_model_name =="perfer_Aug":
                 modeling_outputs, P_final = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
                 #logits = modeling_outputs.logits
                 kvcache = modeling_outputs.past_key_values
                 next_token = torch.argmax(P_final[:, -1], dim=-1)
-                
+            elif args.choose_model_name =="perfer_AugT":
+                modeling_outputs, P_final = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
+                #logits = modeling_outputs.logits
+                kvcache = modeling_outputs.past_key_values
+                next_token = torch.argmax(P_final[:, -1], dim=-1)  
             next_token = next_token.reshape(-1)
             # only replace token if prompt has already been generated
             
@@ -139,6 +145,7 @@ def filte_code(text):
     else:
         return text 
     
+    
 def predict(model, train_config, test_dataloader, tokenizer):
     """
     Evaluates the model on the given dataloader
@@ -172,21 +179,21 @@ def predict(model, train_config, test_dataloader, tokenizer):
                 code_generation = filte_code(code_generation)
                 item = {"user_id":str(user_id[i].item()),"problem_id":problem_id[i],"code_lables": code_lables[i],"code_reply":str(code_generation)}
                 generation_json.append(item)
-            #"problem":str(tokenizer.decode(input_ids[i])
-    if train_config.choose_model_name == "perfer_Base":
-        json.dump(
-            generation_json,
-            open("./out_predict/result_part.json", 'w'),
-            indent=4,
-            ensure_ascii=False
-        )
-    else:
-        json.dump(
-            generation_json,
-            open("./out_predict/perfer_Aug_part.json", 'w'),
-            indent=4,
-            ensure_ascii=False
-        )
+                if train_config.choose_model_name != "perfer_Base":
+                    json.dump(
+                        generation_json,
+                        open(train_config.predict_dirs, 'w'),
+                        indent=4,
+                        ensure_ascii=False
+                    )
+         
+    json.dump(
+        generation_json,
+        open(train_config.predict_dirs, 'w'),
+        indent=4,
+        ensure_ascii=False
+    )
+    
         
                 
    
@@ -222,7 +229,12 @@ def main():
 
     # inint model
     #---------------------------------------------------------------------------------
-    model = PreferCodeLlama(args)
+    if args.choose_model_name == "perfer_Base":
+        model = PreferCodeLlama(args)
+    elif args.choose_model_name =="perfer_Aug":
+        model = PreferAugCodeLlama(args)
+    elif args.choose_model_name =="perfer_AugT":
+        model = PreferAugTCodeLlama(args)
     model = load_model_checkpoint(model, 0, args)
     model = model.cuda()
     on_gpu = all(param.is_cuda for param in model.parameters())

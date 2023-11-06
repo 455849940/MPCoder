@@ -8,6 +8,7 @@ part_model_2/
 part_model_*/
 out_predict/
 aug_model*/
+augT_model*/
 plan.txt
 canshu.txt
 result.txt

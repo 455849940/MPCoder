@@ -21,6 +21,7 @@ class PreferCodeLlama(nn.Module):
         self.emsize = self.model.model.embed_tokens.weight.size(1)  #
         self.user_embeddings = nn.Embedding(config.idnum * self.user_len, self.emsize)
         print(">>> config.idnum = " + str(config.idnum))
+        print(">>> self.user_len = " + str(self.user_len))
         initrange = 0.1
         self.user_embeddings.weight.data.uniform_(-initrange, initrange)
         
@@ -66,5 +67,5 @@ class PreferCodeLlama(nn.Module):
             #hidden_states = output.hidden_states
             #predictions = logits.argmax(dim=-1)
             
-            return loss
+            return {"loss":loss}
         

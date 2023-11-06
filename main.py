@@ -10,6 +10,8 @@ from torch.utils.data import DistributedSampler
 from load_data import processClass
 from model import PreferCodeLlama
 from model_aug import PreferAugCodeLlama
+from model_aug_t import PreferAugTCodeLlama
+from train_utils import load_model_checkpoint 
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
@@ -110,20 +112,26 @@ def main():
     if args.choose_model_name == "perfer_Base":
         print("model is base model")
         model = PreferCodeLlama(args)
-    else:
+    elif args.choose_model_name =="perfer_Aug":
         model = PreferAugCodeLlama(args)
-      
+    elif args.choose_model_name =="perfer_AugT":
+        model = PreferAugTCodeLlama(args)
+        
+    if args.continue_train == "True":
+           model = load_model_checkpoint(model, 0, args)
+           
     if train_config.enable_fsdp:      
         # freeze pretrained model parameters 
         if args.freezeLM:
             for name, param in model.model.named_parameters():
                     #print(name)
-                    #if "lm_head" in name or "model.norm" in name: continue
+                    if "lm_head" in name or "model.norm" in name: continue
                     #if "model.embed_tokens" in name: continue
                     param.requires_grad=False
                     #print(param.requires_grad)
 
         #fsdp_config.use_fp16 = True
+        fsdp_config.choose_model_name = args.choose_model_name
         mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
         print("1", local_rank, rank)
         model = FSDP(

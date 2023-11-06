@@ -6,9 +6,13 @@ from transformers import TrainingArguments
 @dataclass
 class train_config(TrainingArguments):
     
+    continue_train: str = field(
+        default= False,
+        metadata={"help": "continue train."}
+    )
     choose_model_name: str = field(
         default="perfer_Base", 
-        metadata={"help": "perfer_Base perfer_Aug"}
+        metadata={"help": "perfer_Base perfer_Aug perfer_AugT"}
     )
     
     # model params
@@ -67,6 +71,10 @@ class train_config(TrainingArguments):
         metadata={"help": "output_dir"}
     )
     
+    predict_dirs: str = field(
+        default="./out_predict/result_part.json", 
+        metadata={"help": "predict_dirs"}
+    )
     
     # tokenizer params
     padding_side: str = field(
@@ -84,18 +92,18 @@ class train_config(TrainingArguments):
     )   
 
     train_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_part_programming30/Java_programming_train.json"],
+        default_factory=lambda: ["./data/Java_part_programming50/Java_programming_train.json"],
         metadata={"help": "train datasets paths."}
     )
 
 
     eval_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_part_programming30/Java_programming_dev.json"],
+        default_factory=lambda: ["./data/Java_part_programming50/Java_programming_dev.json"],
         metadata={"help": "evaluation datasets paths."}
     )
 
     test_data_path: List[str] = field(
-        default_factory=lambda: ["/home/develop/dzl/PreferCodeLlama/data/Java_part_programming30/Java_programming_test.json"],
+        default_factory=lambda: ["./data/Java_part_programming50/Java_programming_test.json"],
         metadata={"help": "train datasets paths."}
     )
     # training hyperparams

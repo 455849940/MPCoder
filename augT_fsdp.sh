@@ -1,5 +1,5 @@
 export NCCL_P2P_DISABLE=1
-CUDA_VISIBLE_DEVICES=1,5 torchrun --master_port=65531 --nproc_per_node 2 main.py \
+CUDA_VISIBLE_DEVICES=2,5 torchrun --master_port=65532 --nproc_per_node 2 main.py \
     --do_train True \
     --do_eval True \
     --debug_mode False\
@@ -7,8 +7,8 @@ CUDA_VISIBLE_DEVICES=1,5 torchrun --master_port=65531 --nproc_per_node 2 main.py
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
     --num_train_epochs 70 \
-    --choose_model_name perfer_Aug\
-    --output_dir aug_model_linear \
+    --choose_model_name perfer_AugT\
+    --output_dir augT_model_linear \
     --train_data_path ./data/Java_part_programming50/Java_programming_train.json \
     --eval_data_path ./data/Java_part_programming50/Java_programming_dev.json \
     --continue_train False

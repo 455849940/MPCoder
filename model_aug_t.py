@@ -20,23 +20,22 @@ class MLP(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Linear(input_size, hidden_size),
-            #nn.ReLU(),
+            nn.ReLU(),
             nn.Linear(hidden_size, output_size)
         )
 
     def forward(self, x):
-        #x = self.dropout(x)
+        x = self.dropout(x)
         #x = self.linear(x)
         #x = self.activation(x)
         x = self.layers(x)
-        #x = self.activation(x)
         return x
 
     
-class PreferAugCodeLlama(nn.Module):
+class PreferAugTCodeLlama(nn.Module):
     
     def __init__(self, config):
-        super(PreferAugCodeLlama, self).__init__()
+        super(PreferAugTCodeLlama, self).__init__()
         self.model = LlamaForCausalLM.from_pretrained(config.model_name_or_path) 
         self.model.resize_token_embeddings(self.model.model.embed_tokens.weight.size(0) + 8)
         
@@ -49,11 +48,15 @@ class PreferAugCodeLlama(nn.Module):
         initrange = 0.1
         self.user_embeddings.weight.data.uniform_(-initrange, initrange)
         
-        self.mlp = MLP(self.emsize,self.emsize,int(self.emsize/2), 0)
-        self.style_head = nn.Linear(self.emsize, config.vocab_size + 8, bias=False)
+        #self.mlp = MLP(self.emsize,self.emsize,int(self.emsize/2), 0)
+        #self.style_head = nn.Linear(self.emsize, config.vocab_size + 8, bias=True)
         self.story_loss_fn = nn.NLLLoss(ignore_index=-100)
-        self.para = torch.nn.Parameter(torch.tensor([-2.0]), requires_grad=True)
-        self.para.data = self.para.data
+        
+        SCALE = 8
+        self.keyword_W = nn.Linear(self.emsize, self.model.config.vocab_size)
+        self.p_linear1 = nn.Linear(self.model.config.vocab_size, self.emsize//SCALE)
+        self.p_linear2 = nn.Linear(self.emsize//SCALE, self.model.config.vocab_size)
+        self.p_linear3 = nn.Linear(self.emsize, self.emsize//SCALE)
         #print(self.para.item())
     
       
@@ -81,13 +84,18 @@ class PreferAugCodeLlama(nn.Module):
             base_logits = modeling_outputs.logits
             P_base = torch.nn.functional.softmax(base_logits, dim=-1) 
             hidden_states = modeling_outputs.hidden_states
-            
-            Style_time_hidden_states = self.mlp(hidden_states[-1])
-            Style_logits = self.style_head(Style_time_hidden_states)
-            P_Style = torch.nn.functional.softmax(Style_logits, dim=-1) 
-            P_final = P_base + torch.sigmoid(self.para)*P_Style
+            average_sequence_tensors = torch.mean(hidden_states[-1], dim=1)
+            Style_logits = self.keyword_W(average_sequence_tensors)
+            keyword = torch.nn.functional.softmax(Style_logits, dim=-1)
+            seq_len = base_logits.size(1)
+            P_Style = keyword.unsqueeze(1).repeat(1, seq_len, 1)
+            temp = torch.relu(self.p_linear1(P_Style))    # [batch_size, seq_len, bart_last_hidden/SCALE]
+            p = self.p_linear2((temp + self.p_linear3(hidden_states[-1])) / 2) # [batch_size, seq_len, vocab_size]
+            p = torch.sigmoid(p)
+            P_final = p * P_Style + (1-p) * P_base     
             P_final = P_final / P_final.sum(dim=-1, keepdim=True)
             P_final = P_final.log()
+            
             return modeling_outputs, P_final
             #新推理提供以上两个值，需要下一token的词表分布向量
         else:
@@ -108,25 +116,25 @@ class PreferAugCodeLlama(nn.Module):
                 output_hidden_states = True
             )
             
-            #loss = output.loss
-            #hidden_states = outputs[0]
-            #logits = self.lm_head(hidden_states)
+            
             base_logits = output.logits
             P_base = torch.nn.functional.softmax(base_logits, dim=-1) 
             hidden_states = output.hidden_states
-            #print(base_logits.shape)
-            Style_time_hidden_states = self.mlp(hidden_states[-1])
-            Style_logits = self.style_head(Style_time_hidden_states)
-            #print(Style_logits.shape)
-            #input()
-            #大小不一致
-            P_Style = torch.nn.functional.softmax(Style_logits, dim=-1) 
-            
-            P_final = P_base + torch.sigmoid(self.para)*P_Style
-            
-             
+            average_sequence_tensors = torch.mean(hidden_states[-1], dim=1)
+            Style_logits = self.keyword_W(average_sequence_tensors)
+            keyword = torch.nn.functional.softmax(Style_logits, dim=-1)
+            seq_len = base_logits.size(1)
+            # print(keyword.shape)
+            # print(seq_len)
+            # input()
+            P_Style = keyword.unsqueeze(1).repeat(1, seq_len, 1)
+            temp = torch.relu(self.p_linear1(P_Style))    # [batch_size, seq_len, bart_last_hidden/SCALE]
+            p = self.p_linear2((temp + self.p_linear3(hidden_states[-1])) / 2) # [batch_size, seq_len, vocab_size]
+            p = torch.sigmoid(p)
+            P_final = p * P_Style + (1-p) * P_base     
             P_final = P_final / P_final.sum(dim=-1, keepdim=True)
             P_final = P_final.log()
+            
             
             # Flatten the tokens
             shift_P_final = P_final[..., :-1, :].contiguous()
@@ -141,5 +149,5 @@ class PreferAugCodeLlama(nn.Module):
             story_loss = self.story_loss_fn(shift_P_final,shift_labels)
              
             
-            return {"loss":story_loss, "para":torch.sigmoid(self.para)}
+            return {"loss":story_loss}
         
