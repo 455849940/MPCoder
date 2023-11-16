@@ -147,7 +147,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
             if train_config.choose_model_name == "perfer_Aug":
                 dist.all_reduce(total_para, op=dist.ReduceOp.SUM)
                 if rank == 0:
-                    print(f"Training Epoch: {epoch+1} :para is {total_para.item()}")
+                    print(f"Training Epoch: {epoch+1} :para is {total_para.item()/torch.cuda.device_count()}")
             
         train_epoch_loss = total_loss / len(train_dataloader)
         if train_config.enable_fsdp:

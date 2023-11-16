@@ -9,6 +9,10 @@ part_model_*/
 out_predict/
 aug_model*/
 augT_model*/
+style_model/
+humaneval_data/
+test.py
+model_aug_contrast.py
 plan.txt
 canshu.txt
 result.txt

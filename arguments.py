@@ -16,6 +16,10 @@ class train_config(TrainingArguments):
     )
     
     # model params
+    enable_contrast:  bool = field(
+        default= False,
+        metadata={"help": "enable_contrast."}
+    )
     enable_fsdp: bool = field(
         default= True,
         metadata={"help": "enable_fsdp."}
@@ -90,7 +94,14 @@ class train_config(TrainingArguments):
         default="/home/develop/dzl/PreferCodeLlama/data/content_compelete.json",
         metadata={"help": "the path to load data."}
     )   
-
+    human_eval_path: str = field(
+        default="./data/humaneval_java.jsonl",
+        metadata={"help": "humaneval_java datasets paths."}
+    )
+    human_eval_out_path: str = field(
+        default="./out_predict/humaneval_java_out.jsonl",
+        metadata={"help": "humaneval_java datasets paths."}
+    )
     train_data_path: List[str] = field(
         default_factory=lambda: ["./data/Java_part_programming50/Java_programming_train.json"],
         metadata={"help": "train datasets paths."}
@@ -103,7 +114,7 @@ class train_config(TrainingArguments):
     )
 
     test_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_part_programming50/Java_programming_test.json"],
+        default_factory=lambda: ["/home/develop/dzl/PreferCodeLlama/data/Java_part_programming50/Java_programming_test.json"],
         metadata={"help": "train datasets paths."}
     )
     # training hyperparams

@@ -124,9 +124,9 @@ class processClass:
             data_list = self.load_json_data(data_path)
         problem_list = self.load_json_data(problem_path)
         
-        if is_test == False:
-            data_list = sorted(data_list, key=lambda x: x["user_id"]) #按id排序训练
-            
+        #if is_test == False:
+        #    data_list = sorted(data_list, key=lambda x: x["user_id"]) #按id排序训练
+         
         problem_map = dict()
         for item in problem_list:
             problem_map[item['id']] = item['english_content']

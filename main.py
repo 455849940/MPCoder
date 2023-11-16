@@ -94,7 +94,7 @@ def main():
             train_data_set,
             rank=dist.get_rank(),
             num_replicas=dist.get_world_size(),
-            #shuffle=True,
+            shuffle=True, #shuffle
         )
         if train_config.do_eval:
             val_sampler = DistributedSampler(
@@ -110,11 +110,13 @@ def main():
     # inint model
     #---------------------------------------------------------------------------------
     if args.choose_model_name == "perfer_Base":
-        print("model is base model")
+        print("model is Style model")
         model = PreferCodeLlama(args)
     elif args.choose_model_name =="perfer_Aug":
+        print("model is aug Style model")
         model = PreferAugCodeLlama(args)
     elif args.choose_model_name =="perfer_AugT":
+        print("model is augT Style model")
         model = PreferAugTCodeLlama(args)
         
     if args.continue_train == "True":

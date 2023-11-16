@@ -4,4 +4,4 @@ CUDA_VISIBLE_DEVICES=5 python predict.py \
     --per_device_test_batch_size 1 \
     --choose_model_name perfer_AugT\
     --output_dir augT_model_linear \
-    --predict_dirs  ./out_predict/augT_result_part50.json
+    --predict_dirs  ./out_predict/augT_result_liear_30.json

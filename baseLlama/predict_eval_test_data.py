@@ -28,7 +28,7 @@ def evaluate(
             tokenizer,
             input=None,
             num_beams=1,
-            max_new_tokens=2048,
+            max_new_tokens=4096,
             **kwargs,
     ):
 
@@ -52,25 +52,70 @@ def evaluate(
         #print(output.split(E_INST)[1])
         return output
     
+def remove_java_prefix(input_string):
+    # 检查字符串是否以"java"开头
+    if input_string.startswith("java\n"):
+        # 如果是，则删除开头的"java"
+        result_string = input_string[len("java\n"):]
+        return result_string
+    else:
+        # 如果不是，则返回原始字符串
+        return input_string
+    
 def filte_code(text):
     text = text.split(E_INST)[1]
     text = text.strip()
     text = text.strip('\n')
     substring = "```"
+    result_code = None
     if text.find(substring) != -1: 
         text = text.split(substring)
         Len = len(text)
         if Len == 1:
-            return text.strip('\n')
+            result_code = text.strip('\n')
         else:
-            if len(text[0]) > len(text[1]):
-                return text[0].strip('\n')
+            if len(text[1]) == 0:
+                result_code =  text[0].strip('\n')
             else:
-                return text[1].strip('\n')
+                result_code =  text[1].strip('\n')
     else:
-        return text 
+        result_code = text
+    result_code  = remove_java_prefix(result_code)
+    return result_code
+
+def filte_code_for_humaneval(text):
+    text = text.split(E_INST)[1]
+    text = text.strip()
+    text = text.strip('\n')
+   
+    #print(text)
+    #input()
+    #text = text.split(E_INST)[1]
+    substring = "```"
+    result_code = None
+    if text.find(substring) != -1: 
+        text = text.split(substring)
+        Len = len(text)
+        if Len == 1:
+            result_code = text.strip('\n')
+        else:
+            if len(text[1]) == 0:
+                result_code =  text[0].strip('\n')
+            else:
+                result_code =  text[1].strip('\n')
+    else:
+        result_code = text
+   
+    return result_code
     
-def predict_eval_test_data(out_predict__path):
+
+def filte_origin_code(text):
+    text = text.split(E_INST)[1]
+    text = text.strip()
+    text = text.strip('\n')
+    return text
+ 
+def predict_eval_test_data(out_predict__path, mode = "filt"):
     parser = transformers.HfArgumentParser(train_config)
     args = parser.parse_args_into_dataclasses()[0]
     
@@ -85,7 +130,8 @@ def predict_eval_test_data(out_predict__path):
     # load data
     #---------------------------------------------------------------------------------  
     proc = processClass()
-    #train_data_set = proc.get_train_dataset(args,tokenizer)
+    train_data_set = proc.get_train_dataset(args,tokenizer, is_test = False)
+    eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False)
     test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
     args.idnum = proc.idnum
     test_dataloader = DataLoader(test_data_set , batch_size= args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
@@ -98,7 +144,14 @@ def predict_eval_test_data(out_predict__path):
             problem_id  = batch['problem_id']
             batch_output = evaluate(model, tokenizer,input_ids, pad_token_id = 0)
             for i in range(len(batch_output)):
-                code_reply = filte_code(batch_output[i])
+                if mode == "filt":
+                    #print("here")
+                    code_reply = filte_code(batch_output[i])
+                    #input()
+                    #print(code_reply)
+                    #input()
+                else :
+                    code_reply = filte_origin_code(batch_output[i])
                 item = {"user_id":str(user_id[i].item()),"problem_id":str(problem_id[i]),"code_lables":code_lables[i],"code_reply":code_reply}
                 generation_json.append(item)
             
@@ -117,6 +170,17 @@ def get_instruction(input, language, is_test = False):
        
         return text 
  
+def get_instruction2(input, language, is_test = False):
+        instruction =B_SYS + f"Give you a piece of {language} code, please continue to write the unfinished function "+ E_SYS + input
+        if is_test:
+            text = f"{B_INST} {(instruction).strip()} {E_INST}"
+        return text 
+def get_instruction3(input, language, is_test = False):
+        instruction =B_SYS + f"Here is an incomplete code, you need to complete. Wrap your code answer using ```, Your code must include a complete implementation of the 'Solution' class with exactly one function in the class."+ E_SYS + input
+        if is_test:
+            text = f"{B_INST} {(instruction).strip()} {E_INST}"
+        return text     
+        
 def load_json_data(data_path):
     #print("loading text-score dataset from: \n   {}".format(data_path))
     data_list = []
@@ -144,27 +208,69 @@ def generate_humeval_data(data_path):
     #---------------------------------------------------------------------------------  
     generation_json = []
     for item in tqdm(data_list):
-        input = item['prompt']
-        text = get_instruction(input,language="Java",is_test=True)
+        inputs = item['prompt']
+        text = get_instruction3(inputs,language="Java",is_test=True)
         text = tokenizer(text,return_tensors='pt')
         input_ids = text['input_ids'].cuda()
         task_id = item['task_id']
         batch_output = evaluate(model, tokenizer,input_ids, pad_token_id = 0)
+        
         for i in range(len(batch_output)):
-            #code_reply = filte_code(batch_output[i])
-            code_reply = batch_output[i]
-            item = {"task_id":task_id,"generation":code_reply}
+            code_reply = filte_code_for_humaneval(batch_output[i])
+            #print(code_reply)
+        
+            item = {"task_id":task_id,"generation":code_reply,"prompt":inputs}
             generation_json.append(item)
-    
-    with open("./out_predict/humeval_java_base_2.json", 'w') as file:
+            with open("./out_predict/humaneval_java_base_model_test.jsonl", 'w') as file:
+                for item in generation_json:
+                    json.dump(item, file)
+                    file.write('\n')
+    with open("./out_predict/humaneval_java_base_model_test.jsonl", 'w') as file:
         for item in generation_json:
             json.dump(item, file)
             file.write('\n')
         
-        
+def add_prompt(data_path,result_data_path):
+    data_list = load_json_data(data_path)
+    result_data_path = load_json_data(result_data_path)
+    generation_json = []
+    indx = 0
+    for item in tqdm(data_list):
+        inputs = item['prompt']
+        result_data_path[indx]['prompt'] = inputs
+        #print(result_data_path[indx])
+        #input()
+        generation_json.append(result_data_path[indx])
+        indx += 1
+    with open("./out_predict/humeval_java_base_finally.jsonl", 'w') as file:
+        for item in generation_json:
+            json.dump(item, file)
+            file.write('\n')
+
+def re_generate_json(data_path):
+    data_list = load_json_data(data_path)
+    generation_json = []
+    indx = 0
+    for item in tqdm(data_list):
+        item['generation'] = filte_code(item['generation'])
+        generation_json.append(item)
+        indx += 1
+    with open("./out_predict/humeval_java_base_use.jsonl", 'w') as file:
+        for item in generation_json:
+            json.dump(item, file)
+            file.write('\n')       
     
 if __name__ == "__main__":
-    predict_eval_test_data(out_predict__path = "./out_predict/result_base_30.json")
-    #generate_humeval_data("./humaneval/humaneval_java_2.jsonl")
-            
-            
+    #print("start")
+    #predict_eval_test_data(out_predict__path = "./out_predict/result_base_30.json")
+    #text ="import java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    /**\n    Check if in given list of numbers, are any two numbers closer to each other than given threshold.\n    >>> hasCloseElements(Arrays.asList(1.0, 2.0, 3.0), 0.5)\n    false\n    >>> hasCloseElements(Arrays.asList(1.0, 2.8, 3.0, 4.0, 5.0, 2.0), 0.3)\n    true\n     */\n    public boolean hasCloseElements(List<Double> numbers, double threshold) {\n        for (int i = 0; i < numbers.size() - 1; i++) {\n            for (int j = i + 1; j < numbers.size(); j++) {\n                if (Math.abs(numbers.get(i) - numbers.get(j)) < threshold) {\n                    return true;\n                }\n            }\n        }\n        return false;\n    }\n}", "prompt": "import java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    /**\n    Check if in given list of numbers, are any two numbers closer to each other than given threshold.\n    >>> hasCloseElements(Arrays.asList(1.0, 2.0, 3.0), 0.5)\n    false\n    >>> hasCloseElements(Arrays.asList(1.0, 2.8, 3.0, 4.0, 5.0, 2.0), 0.3)\n    true\n     */\n    public boolean hasCloseElements(List<Double> numbers, double threshold) {\n"}
+    text = "import java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    public List<String> separateParenGroups(String paren_string) {\n        // Initialize an empty list to store the separated groups\n        List<String> separated_groups = new ArrayList<>();\n\n        // Initialize a stack to keep track of the opening parentheses\n        Stack<Character> opening_parens = new Stack<>();\n\n        // Iterate through the input string\n        for (char c : paren_string.toCharArray()) {\n            // If the current character is an opening parenthesis, push it to the stack\n            if (c == '(') {\n                opening_parens.push(c);\n            // If the current character is a closing parenthesis, pop the stack and add the group to the list\n            } else if (c == ')') {\n                opening_parens.pop();\n                separated_groups.add(paren_string.substring(opening_parens.size(), paren_string.length() - 1));\n            }\n        }\n\n        // Return the list of separated groups\n        return separated_groups;\n    }\n}"
+    print(text)
+    #generate_humeval_data("./humaneval/humaneval_java.jsonl")
+    #add_prompt("./humaneval/humaneval_java.jsonl","./out_predict/humeval_java_base_fix.jsonl")
+    #text = "[INST] <<SYS>>\nGive you a Programming problem,please Provide answers in Java\n<</SYS>>\n\nimport java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    /**\n    Return length of given string\n    >>> strlen(\"\")\n    0\n    >>> strlen(\"abc\")\n    3\n     */\n    public int strlen(String string) { [/INST]  To get the length of a string in Java, you can use the `length()` method of the `String` class.\n\nHere's an example:\n```\nString str = \"Hello, World!\";\nint length = str.length();\nSystem.out.println(length); // Output: 12\n```\nAlternatively, you can also use the `length()` method of the `StringBuilder` class, which is more efficient for large strings:\n```\nStringBuilder sb = new StringBuilder(\"Hello, World!\");\nint length = sb.length();\nSystem.out.println(length); // Output: 12\n```\nNote that the `length()` method returns the number of characters in the string, not the number of bytes. If you need to get the number of bytes, you can use the `getBytes()` method of the `String` class, which returns a `byte[]` array:\n```\nString str = \"Hello, World!\";\nbyte[] bytes = str.getBytes();\nSystem.out.println(bytes.length); // Output: 13\n```\nIn this case, the `length()` method returns the number of bytes in the `byte[]` array, which is 13 in this case."
+    #text1 = filte_code(text)
+    
+    
+    #re_generate_json("./out_predict/humeval_java_base_2.jsonl")
+    
