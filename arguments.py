@@ -16,6 +16,14 @@ class train_config(TrainingArguments):
     )
     
     # model params
+    alpha : float = field(
+        default=0.1,
+        metadata={"help": "alpha for loss"}
+    )
+    gradient_accumulation_steps: int = field(
+        default = 1,
+        metadata={"help": "gradient_accumulation_steps"}
+    )
     enable_contrast:  bool = field(
         default= False,
         metadata={"help": "enable_contrast."}

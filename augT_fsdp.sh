@@ -11,4 +11,6 @@ CUDA_VISIBLE_DEVICES=3,5 torchrun --master_port=65532 --nproc_per_node 2 main.py
     --output_dir augT_model_linear \
     --train_data_path ./data/Java_part_programming30/Java_programming_train.json \
     --eval_data_path ./data/Java_part_programming30/Java_programming_dev.json \
-    --continue_train False
+    --continue_train False\
+    --enable_contrast True \
+    --alpha 0.5

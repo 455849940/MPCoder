@@ -55,7 +55,8 @@ class processClass:
             self.idnum = idnum
             self.id2vidmap = dict()
             self.vid2idmap = dict()  
-                
+    def get_idmap(self):
+        return self.id2vidmap
     def get_instruction(self, input, answer,language, is_test = False):
         instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + input
         if is_test:
@@ -124,8 +125,8 @@ class processClass:
             data_list = self.load_json_data(data_path)
         problem_list = self.load_json_data(problem_path)
         
-        #if is_test == False:
-        #    data_list = sorted(data_list, key=lambda x: x["user_id"]) #按id排序训练
+        if is_test == False:
+            data_list = sorted(data_list, key=lambda x: x["user_id"]) #按id排序训练
          
         problem_map = dict()
         for item in problem_list:
