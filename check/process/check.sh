@@ -1,0 +1,1 @@
+java -jar checkstyle-10.12.4-all.jar -c /google_checks.xml main.java -f xml -o result1.xml

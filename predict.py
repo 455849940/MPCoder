@@ -14,8 +14,8 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from train_utils import load_model_checkpoint 
-from llama_recipes.utils.memory_utils import MemoryTrace
-from tqdm import tqdm 
+from memory_utils import MemoryTrace
+from tqdm import tqdm  
 PATH_TO_CONVERTED_WEIGHTS = "../CodeLlama-7b-Instruct-hf"
 B_INST, E_INST = "[INST]", "[/INST]"
 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
@@ -70,7 +70,7 @@ def generate(model, tokenizer, args, batch):
         for cur_pos in range(min_prompt_len, total_len):
             #print(cur_pos)
             if args.choose_model_name == "perfer_Base":
-                modeling_outputs = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
+                modeling_outputs = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
                 logits = modeling_outputs.logits
                 kvcache = modeling_outputs.past_key_values
                 
@@ -80,12 +80,12 @@ def generate(model, tokenizer, args, batch):
                 else:
                     next_token = torch.argmax(logits[:, -1], dim=-1)
             elif args.choose_model_name =="perfer_Aug":
-                modeling_outputs, P_final = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
+                modeling_outputs, P_final = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
                 #logits = modeling_outputs.logits
                 kvcache = modeling_outputs.past_key_values
                 next_token = torch.argmax(P_final[:, -1], dim=-1)
             elif args.choose_model_name =="perfer_AugT":
-                modeling_outputs, P_final = model.forward(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
+                modeling_outputs, P_final = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,past_key_values=kvcache) #think
                 #logits = modeling_outputs.logits
                 kvcache = modeling_outputs.past_key_values
                 next_token = torch.argmax(P_final[:, -1], dim=-1)  
@@ -199,7 +199,7 @@ def predict(model, train_config, test_dataloader, tokenizer):
                 code_generation = filte_code(code_generation)
                 item = {"user_id":str(user_id[i].item()),"problem_id":problem_id[i],"code_lables": code_lables[i],"code_reply":str(code_generation)}
                 generation_json.append(item)
-                if train_config.choose_model_name != "perfer_Base" and len(generation_json) %50 == 0:
+                if train_config.choose_model_name != "perfer_Base" and len(generation_json) %10 == 0:
                     json.dump(
                         generation_json,
                         open(train_config.predict_dirs, 'w'),
@@ -266,7 +266,7 @@ def human_eval():
     elif args.choose_model_name =="perfer_AugT":
         model = PreferAugTCodeLlama(args)
     model = load_model_checkpoint(model, 0, args)
-    model = model.cuda()
+    model = torch.nn.DataParallel(model)
     on_gpu = all(param.is_cuda for param in model.parameters())
     if on_gpu:
         print("模型在 GPU 上运行。")
@@ -321,7 +321,9 @@ def human_eval():
     
 
 def main():
-    
+
+    #os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+    torch.cuda.empty_cache()
     parser = transformers.HfArgumentParser(train_config)
     args = parser.parse_args_into_dataclasses()[0]
     
@@ -357,6 +359,9 @@ def main():
         model = PreferAugTCodeLlama(args)
     model = load_model_checkpoint(model, 0, args)
     model = model.cuda()
+   
+    #model = torch.nn.DataParallel(model)
+    
     on_gpu = all(param.is_cuda for param in model.parameters())
     if on_gpu:
         print("模型在 GPU 上运行。")

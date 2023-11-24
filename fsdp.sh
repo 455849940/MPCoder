@@ -6,7 +6,8 @@ CUDA_VISIBLE_DEVICES=1,2,5,7 torchrun --master_port=65530 --nproc_per_node 4 mai
     --learning_rate 1e-4 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
-    --num_train_epochs 10 \
+    --num_train_epochs 4 \
     --output_dir style_model \
-    --train_data_path ./data/Java_part_programming50/Java_programming_train.json \
-    --eval_data_path ./data/Java_part_programming50/Java_programming_dev.json \
+    --train_data_path ./data/Java_programming/Java_programming_train.json \
+    --eval_data_path ./data/Java_programming/Java_programming_dev.json \
+    --continue_train False

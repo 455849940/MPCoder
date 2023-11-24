@@ -218,8 +218,69 @@ if __name__ == "__main__":
                 "pad_token": "<PAD>",
             }
         )
-    tokenizer.pad_token_id = 0
-    prco = processClass()
-    train_data_set = prco.get_train_dataset(args,tokenizer)
-    print(train_data_set[3])
-    print(train_data_set[4])
+    tokenizer.add_tokens(["[DOC]", "[QRY]", "<SYT>"])
+    
+    example_token = tokenizer.encode(" <PAD> <SYT> write a book")
+    print(example_token)
+    words = tokenizer.convert_ids_to_tokens(example_token)
+    print(words)
+    print("-------------")
+    #input()
+    
+    
+    #tokens = torch.tensor(["[DOC]", "[QRY]", "[QRY]", "[SYD]"])
+    tokens = torch.tensor(example_token)
+    vectors = torch.randn((len(tokens), 5))  # 假设每个向量是5维的
+    print(vectors)
+    # 要替换的token的索引
+    token_to_replace = 32019
+    new_vector = torch.randn((5,))  # 新的向量
+    print(new_vector)
+    # 找到要替换的token的索引
+    index_to_replace = torch.nonzero(tokens == token_to_replace, as_tuple=True)[0]
+    # 替换指定位置的向量
+    print(tokens != token_to_replace)
+    #vector_group = new_vector.unsqueeze(0).repeat(len(tokens), 1)
+    #print(vector_group.shape)
+    #print(vectors.shape)
+    #vector_group = vector_group.unsqueeze(0)
+    #vectors = vectors.unsqueeze(0)
+    condition = tokens != token_to_replace
+    pred_right = torch.where(condition.unsqueeze(1), vectors, new_vector)  # replace <pad> with ignore_index
+    ones_tensor = torch.ones((5,))
+
+    print("---------------------")
+    print(pred_right)
+    print(new_vector)
+    shares_memory = new_vector.is_set_to(pred_right[index_to_replace])
+    shares_memory2 = new_vector.is_set_to(new_vector)
+    new_vector1 = torch.randn((5,))  # 新的向量
+    new_vector2 = torch.randn((5,))  # 新的向量
+    new_vector3 = torch.cat([new_vector1,new_vector2],0)  # 新的向量
+    shares_memory3 = new_vector1.is_set_to(new_vector3[0])    
+    print(shares_memory3)
+    print("--------------------")
+    print(pred_right)
+    print(new_vector)
+    print("------------------")
+    # print(tokenizer.pad_token_id)
+   
+    # print("------------")
+    # tokenizer.pad_token_id = 0
+    
+    # example_token = tokenizer.encode(" <PAD> <SYT> write a book")
+    # print(example_token)
+    # words = tokenizer.convert_ids_to_tokens(example_token)
+    # print(words)
+    
+    # eos_token = tokenizer.eos_token_id
+    # bos_token = tokenizer.bos_token_id
+    # print(bos_token)
+    # print(eos_token)
+    # words = tokenizer.convert_ids_to_tokens(32016)
+    # print(words)
+    # print("--------")
+    #prco = processClass()
+    #train_data_set = prco.get_train_dataset(args,tokenizer)
+    #print(train_data_set[3])
+    #print(train_data_set[4])

@@ -1,6 +1,8 @@
 import json
 import csv
 from collections import defaultdict
+import random
+import math
 csv.field_size_limit(1 * 1024 * 1024) 
 open_Java_dir = './Java_programming/response_log.csv'
 open_Cpp_dir = './C++_programming/response_log.csv'
@@ -18,9 +20,9 @@ filt_ac_Java_dir = './Java_programming/Java_programming_ac.json'
 Java_train_dir = './Java_programming/Java_programming_train.json'
 Java_dev_dir = './Java_programming/Java_programming_dev.json'
 Java_test_dir = './Java_programming/Java_programming_test.json'
-train_part_dir = './Java_part_programming/Java_programming_train.json'
-dev_part_dir = './Java_part_programming/Java_programming_dev.json'
-test_part_dir = './Java_part_programming/Java_programming_test.json'
+train_part_dir = './Java_part_programming50/Java_programming_train.json'
+dev_part_dir = './Java_part_programming50/Java_programming_dev.json'
+test_part_dir = './Java_part_programming50/Java_programming_test.json'
 
 
 
@@ -239,22 +241,22 @@ def analyze_accepted_programming_json(ac_json_dir, up_cont,single_ac_cont = None
     final_need_student_map = dict() #最终符合条件的学生数量
     final_record_count = 0#最终符合条件的记录数量
     for item in data_map:
-        if item["problem_set_problem_id"] not in problem_map:
-            problem_map[item["problem_set_problem_id"]] = 0
+        if item["problem_id"] not in problem_map:
+            problem_map[item["problem_id"]] = 0
             problem_count += 1
             
         if item["user_id"] not in std_ac_map:
             std_ac_map[item["user_id"]] = 0
             std_count += 1
-        if (item["user_id"], item["problem_set_problem_id"]) not in std_to_pro_map:
+        if (item["user_id"], item["problem_id"]) not in std_to_pro_map:
             std_ac_map[item["user_id"]] += 1
-            std_to_pro_map[(item["user_id"], item["problem_set_problem_id"])] = 0
+            std_to_pro_map[(item["user_id"], item["problem_id"])] = 0
             
-        std_to_pro_map[(item["user_id"], item["problem_set_problem_id"])]  += 1
-        maxx_std2pro_num = max(maxx_std2pro_num, std_to_pro_map[(item["user_id"], item["problem_set_problem_id"])])
+        std_to_pro_map[(item["user_id"], item["problem_id"])]  += 1
+        maxx_std2pro_num = max(maxx_std2pro_num, std_to_pro_map[(item["user_id"], item["problem_id"])])
     if single_ac_cont is not None:
         for item in data_map:
-            if  std_to_pro_map[(item["user_id"], item["problem_set_problem_id"])] > single_ac_cont:
+            if  std_to_pro_map[(item["user_id"], item["problem_id"])] > single_ac_cont:
                 stu_submit_full_map[item["user_id"]] = True
                 
     for user_id, num in std_ac_map.items():    
@@ -295,17 +297,17 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
     can_student_id2pnum_map = dict() #满足条件的学生id对应的题目数量
     stu_submit_full_map = dict() #提交单题目数量超过single_ac_cont次的学生map
     for item in data_map:
-        if (item["user_id"], item["problem_set_problem_id"]) not in stdApro_map:
+        if (item["user_id"], item["problem_id"]) not in stdApro_map:
             if item["user_id"] not in std_ac_map:
                 std_ac_map[item["user_id"]] = 0
             std_ac_map[item["user_id"]] += 1
-            stdApro_map[(item["user_id"], item["problem_set_problem_id"])] = 0
+            stdApro_map[(item["user_id"], item["problem_id"])] = 0
             
-        stdApro_map[(item["user_id"], item["problem_set_problem_id"])]  += 1
+        stdApro_map[(item["user_id"], item["problem_id"])]  += 1
     
     if single_ac_cont is not None:
         for item in data_map:
-            if  stdApro_map[(item["user_id"], item["problem_set_problem_id"])] > single_ac_cont:
+            if  stdApro_map[(item["user_id"], item["problem_id"])] > single_ac_cont:
                 stu_submit_full_map[item["user_id"]] = True
                 
     
@@ -338,11 +340,13 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
     record_number = 0
     for item in data_map:
         user_id = item["user_id"]
-        problem_id = item["problem_set_problem_id"]
+        problem_id = item["problem_id"]
         if user_id not in std_cont_in_train_map: #过滤小于upcont的学生id 过滤单题ac提交数超过 single_ac_cont
             continue
         #if user_id in stu_submit_full_map: #
         #    continue
+        newitem ={"user_id":item['user_id'],"problem_id":item['problem_id'],"code":item['code']}
+        item = newitem
         record_number += 1
         if (user_id, problem_id) in train_stdApro_map:
             train.append(item) 
@@ -390,14 +394,144 @@ def produce_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, t
         indent=4,
         ensure_ascii=False
     )
+
+
+def split_accepted_programming_json(ac_json_dir, train_out_dir, dev_out_dir, test_out_dir, ratio,up_cont,single_ac_cont=None ,need_std_cont = None):
+    
+    with open(ac_json_dir,'r',encoding='utf-8') as ac_file:
+        ac_data=json.load(ac_file)
+    
+    forbidden_std= set()   # 不符合条件的学生集合
+    std_ac_map = dict() # {(stu_id): (num)} #某个学生的做题总数
+    stdApro_map = defaultdict(set)    # {(stu_id,problem_id): (num)} #某个学生的某题的提交次数
+    stu_submit_full_map = dict() #提交单题目数量超过single_ac_cont次的学生map
+    for item in ac_data:
+        if (item["user_id"], item["problem_id"]) not in stdApro_map:
+            if item["user_id"] not in std_ac_map:
+                std_ac_map[item["user_id"]] = 0
+            std_ac_map[item["user_id"]] += 1
+            stdApro_map[(item["user_id"], item["problem_id"])] = 0
+            
+        stdApro_map[(item["user_id"], item["problem_id"])]  += 1
+    
+    if single_ac_cont is not None:
+        for item in ac_data:
+            if  stdApro_map[(item["user_id"], item["problem_id"])] > single_ac_cont:
+                stu_submit_full_map[item["user_id"]] = True
+    
+    # 根据 1.某人做题总数 2.某人某题ac上限 剔除部分学生
+    for user_id, num in std_ac_map.items(): 
+        if single_ac_cont is not None:
+            if user_id in stu_submit_full_map:
+                forbidden_std.add(user_id)
+                continue
+        if num < up_cont:
+            forbidden_std.add(user_id)
+            continue
+    
+    # 去除不合格学生
+    choose_std_set=set()
+    for user_id, num in std_ac_map.items():       
+        if user_id in forbidden_std:
+            continue
+        choose_std_set.add(user_id)
+    
+    
+    # (A,B,C,D,E,F)-> (A,B,C,D) (E) (F)
+    problem_pool=set()
+   
+    for item in ac_data:
+        if item['user_id'] in choose_std_set:
+            problem_pool.add(item['problem_id'])
+       
+    problem_list = list(problem_pool)
+    random.shuffle(problem_list)
+    problem_list_len = len(problem_list)
+    dev_problem_size = math.floor(problem_list_len*(1-ratio)/2)
+    test_problem_size = math.floor(problem_list_len*(1-ratio)/2)
+    dev_problem = set(problem_list[:dev_problem_size])
+    test_problem = set(problem_list[dev_problem_size:dev_problem_size+test_problem_size])
+               
+    train = []
+    dev = []
+    test = []
+    
+    in_train_std = set()
+    in_dev_std=set()
+    in_test_std=set()    
+    for item in ac_data:
+        if item['user_id'] not in choose_std_set:
+            continue 
+        if item['problem_id'] in dev_problem:
+            in_dev_std.add(item['user_id'])
+        elif item['problem_id'] in test_problem:
+            in_test_std.add(item['user_id'])
+        else:
+            in_train_std.add(item['user_id'])
+            
+    final_choose_stds=set()
+    
+    for std in choose_std_set:
+        if std in in_test_std and std in in_train_std and std in in_dev_std:
+            final_choose_stds.add(std)
+            if need_std_cont is not None: 
+                if len(final_choose_stds)==need_std_cont:
+                    break 
         
+    in_dev_std.clear()
+    in_test_std.clear()
+    in_train_std.clear()
+    
+    for item in ac_data:
+        if item['user_id'] not in final_choose_stds:
+            continue 
+        if item['problem_id'] in dev_problem:
+            dev.append(item)
+            in_dev_std.add(item['user_id'])
+        elif item['problem_id'] in test_problem:
+            test.append(item)
+            in_test_std.add(item['user_id'])
+        else:
+            in_train_std.add(item['user_id'])
+            train.append(item)
+            
+    print('total user choose'+str(len(choose_std_set)))
+    print('total user really train'+str(len(in_train_std) ))       
+    print('total user really dev'+str(len(in_dev_std)))    
+    print('total user really test'+str(len(in_test_std)))                   
+    print("total train count = " + str(len(train)))
+    print("total dev count = " + str(len(dev)))
+    print("total test count = " + str(len(test)))
+    print("totoal data count = " + str(len(test) + len(dev) + len(train)))
+
+    json.dump(
+        train,
+        open(train_out_dir, 'w'),
+        indent=4,
+        ensure_ascii=False
+    )
+    json.dump(
+        dev,
+        open(dev_out_dir, 'w'),
+        indent=4,
+        ensure_ascii=False
+    )
+    json.dump(
+        test,
+        open(test_out_dir, 'w'),
+        indent=4,
+        ensure_ascii=False
+    )
+    
 #手动设置比例和答题超过指定数量的学生数, 新加参数指定学生数
 def process_to_json(content_dir, lanauage, open_csv_dir, restore_json_dir, filt_ac_dir, train_dir, dev_dir, test_dir):
     process_csv_to_json(open_csv_dir, restore_json_dir)
     filt_accepted_programming_json(restore_json_dir, filt_ac_dir, content_dir, lanauage)
-    analyze_accepted_programming_json(filt_ac_dir,20, 3)
-    produce_accepted_programming_json(filt_ac_dir,train_dir,dev_dir,test_dir, 0.8, 20,3, None)
-             
+    analyze_accepted_programming_json(filt_ac_dir,20, 1)
+    #produce_accepted_programming_json(filt_ac_dir,train_dir,dev_dir,test_dir, 0.8, 20,1, None)
+    split_accepted_programming_json(filt_ac_dir,train_dir,dev_dir,test_dir, 0.8, 20,1, None) 
+    
+            
 #导出指定problem_id的记录           
 def  get_problem_json(content_dir, id_list, out_content_dir):
     with open(content_dir,'r',encoding="utf-8") as f:
@@ -413,8 +547,6 @@ def  get_problem_json(content_dir, id_list, out_content_dir):
         indent=4,
         ensure_ascii=False
     )        
-
-
 
 
 def remove_control_characters(input_str):
@@ -435,7 +567,6 @@ def remove_control_chars(text):
     return cleaned_text
 
  
-
 def form_ac_json_get_use_content(filt_ac_Java_dir, filt_ac_Csharp_dir, filt_ac_Cpp_dir, filt_ac_Python_dir, content_dir):
     id_map = dict()
     with open(content_dir,'r',encoding="utf-8-sig") as f:
@@ -521,10 +652,11 @@ def test_format_process_csv_to_json(open_dir,restore_dir = "./java_programming_f
         open(restore_dir, 'w'),
         indent=4,
         ensure_ascii=False
-    )    
+    )   
+     
 if __name__ == "__main__":
     # 示例输入字符串
-    
+    #random.seed(42)
     #ls = list()
     #ls.append('1074931048055713792')
     #get_problem_json(content_dir,ls,'./delete.json')
@@ -536,9 +668,13 @@ if __name__ == "__main__":
    
     #form_ac_json_get_use_content(filt_ac_Java_dir, filt_ac_Csharp_dir, filt_ac_Cpp_dir, filt_ac_Python_dir, content_dir)
     #process_to_json(content_dir,"Java",open_Java_dir,restore_Java_dir,filt_ac_Java_dir,Java_train_dir,Java_dev_dir,Java_test_dir)
-    produce_accepted_programming_json(filt_ac_Java_dir,train_part_dir,dev_part_dir,test_part_dir, 0.8, 20, 3, 100) #100个学生
-    #produce_accepted_programming_json(filt_ac_Java_dir,Java_train_dir,Java_dev_dir,Java_test_dir, 0.8, 20, 3, None) #全量
-    
+    #produce_accepted_programming_json(filt_ac_Java_dir,train_part_dir,dev_part_dir,test_part_dir, 0.8, 20, 1, 10) #100个学生
+     
+     
+    #analyze_accepted_programming_json(filt_ac_Java_dir,20, 1)
+    #split_accepted_programming_json(filt_ac_Java_dir,Java_train_dir,Java_dev_dir,Java_test_dir, 0.8, 20, 1, None) #全量
+    split_accepted_programming_json(filt_ac_Java_dir,train_part_dir,dev_part_dir,test_part_dir, 0.8, 20, 1, 50) # 50学生
+    #split_accepted_programming_json(filt_ac_Cpp_dir,Cpp_train_dir,Cpp_dev_dir,Cpp_test_dir, 0.8, 20,1, None) 
     #test_format_process_csv_to_json(open_Java_dir)
-    
-    #analyze_accepted_programming_json(filt_ac_Java_dir,20, 3)
+    #input()
+    #analyze_accepted_programming_json(filt_ac_Java_dir,20, 1)

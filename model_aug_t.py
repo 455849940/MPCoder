@@ -8,7 +8,9 @@ from transformers import (
     LlamaTokenizer,
     LlamaConfig
 )
+import torch.distributed as dist
 
+import torch.nn.functional as F
 class ContrastLoss(nn.Module):
 
     def __init__(self, temperature=0.5, scale_by_temperature=True):
@@ -83,20 +85,21 @@ class MLP(nn.Module):
         super().__init__()
    
         #self.linear = nn.Linear(input_size, output_size)
-        self.activation = nn.GELU()
+        self.activation = nn.Tanh()
         self.dropout = nn.Dropout(dropout)
 
         self.layers = nn.Sequential(
             nn.Linear(input_size, hidden_size),
-            nn.ReLU(),
+            #nn.ReLU(),
             nn.Linear(hidden_size, output_size)
         )
 
     def forward(self, x):
-        x = self.dropout(x)
+        #x = self.dropout(x)
         #x = self.linear(x)
         #x = self.activation(x)
         x = self.layers(x)
+        #x = self.activation(x) #新加激活层
         return x
     
 def gather_all_with_local_grad(tensor, dim=0):
@@ -124,18 +127,21 @@ class PreferAugTCodeLlama(nn.Module):
         print(">>> self.user_len = " + str(self.user_len))
         initrange = 0.1
         self.user_embeddings.weight.data.uniform_(-initrange, initrange)
-        
-        #self.mlp = MLP(self.emsize,self.emsize,int(self.emsize/2), 0)
+        SCALE = 8
+        self.mlp = MLP(self.emsize,self.emsize,int(self.emsize//SCALE), 0)
         #self.style_head = nn.Linear(self.emsize, config.vocab_size + 8, bias=True)
         self.story_loss_fn = nn.NLLLoss(ignore_index=-100)
         
-        SCALE = 8
+        
         self.keyword_W = nn.Linear(self.emsize, self.model.config.vocab_size)
         self.p_linear1 = nn.Linear(self.model.config.vocab_size, self.emsize//SCALE)
         self.p_linear2 = nn.Linear(self.emsize//SCALE, self.model.config.vocab_size)
         self.p_linear3 = nn.Linear(self.emsize, self.emsize//SCALE)
         #print(self.para.item())
-    
+        self.enable_contrast = config.enable_contrast
+        self.ContrastLoss = ContrastLoss(temperature=0.5)
+        #print(self.para.item())
+        self.alpha = config.alpha
       
     def forward(self, user_id, input_ids, attention_mask, past_key_values = None):
         #print("now")
@@ -161,11 +167,12 @@ class PreferAugTCodeLlama(nn.Module):
             base_logits = modeling_outputs.logits
             P_base = torch.nn.functional.softmax(base_logits, dim=-1) 
             hidden_states = modeling_outputs.hidden_states
-            average_sequence_tensors = torch.mean(hidden_states[-1], dim=1)
-            Style_logits = self.keyword_W(average_sequence_tensors)
-            keyword = torch.nn.functional.softmax(Style_logits, dim=-1)
-            seq_len = base_logits.size(1)
-            P_Style = keyword.unsqueeze(1).repeat(1, seq_len, 1)
+            Style_time_hidden_states = self.mlp(hidden_states[-1])
+            average_sequence_tensors = torch.mean(Style_time_hidden_states, dim=1)
+            Style_logits = self.keyword_W(Style_time_hidden_states)
+            P_Style = torch.nn.functional.softmax(Style_logits, dim=-1)
+            #seq_len = base_logits.size(1)
+            #P_Style = keyword.unsqueeze(1).repeat(1, seq_len, 1)
             temp = torch.relu(self.p_linear1(P_Style))    # [batch_size, seq_len, bart_last_hidden/SCALE]
             p = self.p_linear2((temp + self.p_linear3(hidden_states[-1])) / 2) # [batch_size, seq_len, vocab_size]
             p = torch.sigmoid(p)
@@ -197,12 +204,15 @@ class PreferAugTCodeLlama(nn.Module):
             base_logits = output.logits
             P_base = torch.nn.functional.softmax(base_logits, dim=-1) 
             hidden_states = output.hidden_states
-            average_sequence_tensors = torch.mean(hidden_states[-1], dim=1)
-            Style_logits = self.keyword_W(average_sequence_tensors)
-            keyword = torch.nn.functional.softmax(Style_logits, dim=-1)
-            seq_len = base_logits.size(1)
+            #average_sequence_tensors = torch.mean(u_emd, dim=1)
+            Style_time_hidden_states = self.mlp(hidden_states[-1])
+            average_sequence_tensors = torch.mean(Style_time_hidden_states, dim=1)
+            Style_logits = self.keyword_W(Style_time_hidden_states)
             
-            P_Style = keyword.unsqueeze(1).repeat(1, seq_len, 1)
+            P_Style = torch.nn.functional.softmax(Style_logits, dim=-1)
+            #seq_len = base_logits.size(1)
+            
+            #P_Style = keyword.unsqueeze(1).repeat(1, seq_len, 1)
             temp = torch.relu(self.p_linear1(P_Style))    # [batch_size, seq_len, bart_last_hidden/SCALE]
             p = self.p_linear2((temp + self.p_linear3(hidden_states[-1])) / 2) # [batch_size, seq_len, vocab_size]
             p = torch.sigmoid(p)
@@ -222,7 +232,14 @@ class PreferAugTCodeLlama(nn.Module):
             shift_labels = shift_labels.to(shift_P_final.device)
             
             story_loss = self.story_loss_fn(shift_P_final,shift_labels)
-             
+            if self.enable_contrast:
+                u_prompt = torch.mean(u_emd,dim=1)
+                #Style_hidden_states = torch.mean(average_sequence_tensors,dim=1)
+                u_prompt_batch = gather_all_with_local_grad(u_prompt)
+                Style_hidden_states_batch = gather_all_with_local_grad(average_sequence_tensors)
+                user_id_batch = gather_all_with_local_grad(user_id)
+                contrast_loss = self.ContrastLoss(u_prompt_batch,Style_hidden_states_batch,labels = user_id_batch)
+                story_loss =  story_loss +  self.alpha * contrast_loss
             
             return {"loss":story_loss}
         
