@@ -116,12 +116,12 @@ def gather_all_with_local_grad(tensor, dim=0):
 
     return torch.cat(all_tensors, dim=dim)
     
-class PreferAugTCodeLlama(nn.Module):
+class PreferFeatureCodeLlama(nn.Module):
     
     def __init__(self, config):
-        super(PreferAugTCodeLlama, self).__init__()
+        super(PreferFeatureCodeLlama, self).__init__()
         self.model = LlamaForCausalLM.from_pretrained(config.model_name_or_path) 
-        self.model.resize_token_embeddings(self.model.model.embed_tokens.weight.size(0) + 8)
+        self.model.resize_token_embeddings(self.model.model.embed_tokens.weight.size(0) + 32)
         
                     
         self.user_len = 5
@@ -146,9 +146,59 @@ class PreferAugTCodeLlama(nn.Module):
         self.ContrastLoss = ContrastLoss(temperature=0.5)
         #print(self.para.item())
         self.alpha = config.alpha
-      
-    def forward(self, user_id, input_ids, attention_mask, past_key_values = None):
-        #print("now")
+        
+        self.forwardChoose = config.forwardChoose
+        self.Style_embeddings = nn.Embedding(26, self.emsize)
+        self.Style_embeddings.weight.data.uniform_(-initrange, initrange)
+        
+    def set_forwardChoose(self, forwardChoose):
+        self.forwardChoose = forwardChoose
+        
+    def forward(self, user_id, input_ids, attention_mask, select_mask, past_key_values = None):
+        w_emd = self.model.model.embed_tokens(input_ids)  # (batch_size, tgt_len, emsize)
+        
+        if past_key_values is None: #输入句子
+            select_emd = self.Style_embeddings(select_mask)
+            select_condition = select_mask.unsqueeze(2)
+            
+            input_emd = torch.where(select_condition == 0, w_emd, select_emd) #把风格位置插入风格向量
+            new_input_ids = torch.where(select_mask == 0, input_ids, -100)  #把风格位置Token换成-100
+        else:
+            input_emd = w_emd
+            new_input_ids = input_ids
+            
+        if self.forwardChoose == 1:
+            return self.forwardB(user_id, input_emd, new_input_ids, attention_mask, past_key_values)
+        else:
+            return self.forwardA(input_emd, new_input_ids, attention_mask, past_key_values)
+            
+    def forwardA(self, src_emd, input_ids, attention_mask, past_key_values = None):   
+        ignore_index = -100
+        text = input_ids
+        mask = attention_mask
+
+        if mask is None:
+            # auto-regressive generation
+            modeling_outputs = self.model.forward(inputs_embeds=src_emd,past_key_values = past_key_values, output_hidden_states = True)        
+            return modeling_outputs
+
+        else:
+            # prediction for training
+            newlabels = torch.where(mask == 1, text, torch.tensor(ignore_index).cuda())  # replace <pad> with ignore_index
+            
+        output = self.model(
+                #input_ids=input_ids,
+                inputs_embeds = src_emd,
+                attention_mask = mask,
+                labels= newlabels,
+                return_dict = True,
+                output_hidden_states = True
+            )     
+        
+        return {"loss":output.loss}
+    
+    def forwardB(self, user_id, w_emd, input_ids, attention_mask, past_key_values = None):
+        
         ignore_index = -100
         text = input_ids
         mask = attention_mask
@@ -158,8 +208,7 @@ class PreferAugTCodeLlama(nn.Module):
         add_id_sql = torch.arange(0, self.user_len).cuda()
         id_sql = user_id_sql + add_id_sql
         u_emd = self.user_embeddings(id_sql)
-        #print("1", user_id.device, user_id_sql.device, add_id_sql.device, id_sql.device)
-        w_emd = self.model.model.embed_tokens(input_ids)  # (batch_size, tgt_len, emsize)
+        
         if past_key_values is None:
             src_emd = torch.cat([u_emd, w_emd], 1)  # (batch_size, total_len, emsize)
         else:

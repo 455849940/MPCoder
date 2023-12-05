@@ -6,13 +6,14 @@ from transformers import TrainingArguments
 @dataclass
 class train_config(TrainingArguments):
     
-    continue_train: str = field(
+    continue_train: bool = field(
         default= False,
         metadata={"help": "continue train."}
     )
-    choose_model_name: str = field(
-        default="perfer_Base", 
-        metadata={"help": "perfer_Base perfer_Aug perfer_AugT"}
+    
+    forwardChoose: int = field(
+        default= 0, 
+        metadata={"help": "forwardChoose [0,1]"}
     )
     
     # model params
@@ -53,12 +54,12 @@ class train_config(TrainingArguments):
     )
     
     model_name_or_path: str = field(
-        default="./CodeLlama-7b-Instruct-hf", 
+        default="../CodeLlama-7b-Instruct-hf", 
         metadata={"help": "the path to load pretrained model."}
     )
 
     tokenizer_path: str = field(
-        default="./CodeLlama-7b-Instruct-hf", 
+        default="../CodeLlama-7b-Instruct-hf", 
         metadata={"help": "the path to load pretrained tokenizer."}
     )
     pooling_type: str = field(
@@ -70,6 +71,7 @@ class train_config(TrainingArguments):
         default=0,
         metadata={"help": "eval best epoch."}
     ) 
+    
     # mode generate
     
     temperature: float = field( default=0.0, metadata={"help": "generate temperature"})
@@ -79,12 +81,17 @@ class train_config(TrainingArguments):
     # experiment setups
     
     output_dir: str = field(
-        default="part_model", 
+        default="stylePrompt_model/stylePrompt_modelA", 
+        metadata={"help": "output_dir"}
+    )
+    
+    output_dir2: str = field(
+        default="stylePrompt_model/stylePrompt_modelB", 
         metadata={"help": "output_dir"}
     )
     
     predict_dirs: str = field(
-        default="./out_predict/result_part.json", 
+        default="../out_predict/result_part.json", 
         metadata={"help": "predict_dirs"}
     )
     
@@ -93,30 +100,29 @@ class train_config(TrainingArguments):
         default="right",
         metadata={"help": "the direction for tokenizer to add padding tokens."}
     )
-
-    per_device_test_batch_size: int = field(default= 2,metadata={"help": "per_device_test_batch_size."})
+    
 
     # data params
     language : str = field(default="Java",metadata={"help": "language data."})   
     problem_path: str = field(
-        default="/home/develop/dzl/PreferCodeLlama/data/content_compelete.json",
+        default="../data/content_compelete.json",
         metadata={"help": "the path to load data."}
     )   
     human_eval_path: str = field(
-        default="./data/humaneval_java.jsonl",
+        default="../data/humaneval_java.jsonl",
         metadata={"help": "humaneval_java datasets paths."}
     )
     human_eval_out_path: str = field(
-        default="./out_predict/humaneval_java_out.jsonl",
+        default="../out_predict/humaneval_java_out.jsonl",
         metadata={"help": "humaneval_java datasets paths."}
     )
     train_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/Java_programming_train.json"],
+        default_factory=lambda: ["../data/Java_programming/Java_programming_train.json"],
         metadata={"help": "train datasets paths."}
     )
 
     eval_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/Java_programming_dev.json"],
+        default_factory=lambda: ["../data/Java_programming/Java_programming_dev.json"],
         metadata={"help": "evaluation datasets paths."}
     )
 
@@ -126,12 +132,39 @@ class train_config(TrainingArguments):
     )
     
     feature_train_data_path: List[str] = field(
-        default_factory=lambda: ["./data/Java_programming/Java_feature/feature_train.json"],
+        default_factory=lambda: ["../data/Java_programming/Java_feature/code_styleFeature_train.json"],
         metadata={"help": "train datasets paths."}
     )
-   
+    
+    feature_dev_data_path: List[str] = field(
+        default_factory=lambda: ["../data/Java_programming/Java_feature/code_styleFeature_dev.json"],
+        metadata={"help": "train datasets paths."}
+    )
+    
+    user_style_data_path: str = field(
+        default="../data/Java_programming/Java_feature/user_style.json",
+        metadata={"help": "train datasets paths."}
+    )
+    
     
     # training hyperparams
+    num_feature_train_epochs: int = field(default= 30,metadata={"help": "num_feature_train_epochs."})
+    
+    per_device_feature_train_batch_size: int = field(default= 2,metadata={"help": "per_device_feature_train_batch_size."})
+    
+    per_device_feature_dev_batch_size: int = field(default= 2,metadata={"help": "per_device_feature_dev_batch_size."})
+    
+    per_device_test_batch_size: int = field(default= 2,metadata={"help": "per_device_test_batch_size."})
+    
+    do_train_first: bool = field(
+        default=True,
+        metadata={"help": "train first stage"}
+    )
+    do_train_second: bool = field(
+        default=True,
+        metadata={"help": "train second stage"}
+    )
+    
     eval_at_start: bool = field(
         default=False,
         metadata={"help": "whether make eval at start."}

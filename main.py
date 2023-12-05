@@ -57,21 +57,7 @@ def main():
                 "pad_token": "<PAD>",
             }
         )    
-    # input_ids = tokenizer('i am iron man',return_tensors='pt')
     
-    # print(input_ids['input_ids'])
-    # print(input_ids['input_ids'].shape[1])
-    # input()
-    #example_token = tokenizer.encode(" [INST] write a book")
-    # print(example_token)
-    # words = tokenizer.convert_ids_to_tokens(example_token)
-    # print(words)
-    # input()
-    #bos_token = tokenizer.eos_token_id
-    #print(bos_token)
-    #words = tokenizer.convert_ids_to_tokens(bos_token)
-    #print(words)
-    #input()
     # load data
     #---------------------------------------------------------------------------------  
     proc = processClass()
@@ -150,16 +136,7 @@ def main():
         
         if not train_config.enable_fsdp or rank == 0:
             print_trainable_parameters(model)
-        # rank = dist.get_rank()
-        # print(f"Start running basic DDP example on rank {rank}.")
-        # # create model and move it to GPU with id rank
-        # device_id = rank % torch.cuda.device_count()
-        # model = model.to(rank)        
-        # model = DDP(model, device_ids= [device_id], output_device= device_id, find_unused_parameters=True)
-        # if args.freezeLM:
-        #         #freeze_transformer_layers(model, 32)
-        #         for name, param in model.module.model.named_parameters():
-        #             param.requires_grad=False
+        
         
     
             

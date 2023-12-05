@@ -7,21 +7,22 @@ import numpy as np
 import scipy.stats
 import io
 import os
-prefer_predict_json_path = "./data/augT_result_liear_50_contrast_tanh.json"
-base_predict_json_patch = "./data/result_base_50.json"
+from tqdm import tqdm
+prefer_predict_json_path = "./data/augT_result_liear_e4_contrast.json"
+base_predict_json_patch = "./data/result_base_all.json"
 
-real_out_dir = "./prefer_predict_result/real_result_list50.json"
-base_out_dir = "./base_predict_result/base_result_list50.json"
-prefer_out_dir = "./prefer_predict_result/pre_result_list50.json"
+real_out_dir = "./prefer_predict_result/real_result_list_all.json"
+base_out_dir = "./base_predict_result/base_result_list_all.json"
+prefer_out_dir = "./prefer_predict_result/style_model_e4_result_list_all.json"
 def inint_style_map():
     initial_value = 0
     keys = ['RightCurly','SeparatorWrap','NoLineWrapCheck', 'AvoidStarImportCheck', 'OneTopLevelClassCheck',
             'EmptyLineSeparatorCheck', 'WhitespaceAroundCheck', 'GenericWhitespaceCheck',
-            'OperatorWrapCheck''LineLengthCheck','LeftCurlyCheck', 'EmptyBlockCheck',
+            'OperatorWrapCheck','LineLengthCheck','LeftCurlyCheck', 'EmptyBlockCheck',
             'NeedBracesCheck', 'IndentationCheck', 'MultipleVariableDeclarationsCheck',
             'OneStatementPerLineCheck','UpperEllCheck', 'ModifierOrderCheck', 
             'FallThroughCheck','MissingSwitchDefaultCheck', 
-            'TypeNameCheck', 'MethodNameCheck','MemberNameCheck', 'ParameterNameCheck', 'LocalVariableNameCheck',]
+            'TypeNameCheck', 'MethodNameCheck','MemberNameCheck', 'ParameterNameCheck', 'LocalVariableNameCheck']
     style_map = {key: initial_value for key in keys}
     return style_map
 
@@ -87,7 +88,7 @@ def Create_file(java_code, file_name):
     # 写入文件
     with open(file_name, "w") as file:
         file.write(java_code)
-    print(f"Java文件已创建：{file_name}")
+    #print(f"Java文件已创建：{file_name}")
     
 def get_Style_result(code, idx, style_map):
     #1.生成java文件
@@ -118,7 +119,7 @@ def get_predict_java_list(predict_json_path,is_true, out_dir):
     fail_json_path = []
     fail_convert_java_cont = 0
     num = 0
-    for item in predict_json_data_list:
+    for item in tqdm(predict_json_data_list):
         if is_true:
             code = item["code_lables"]
             #print(code)
@@ -131,8 +132,8 @@ def get_predict_java_list(predict_json_path,is_true, out_dir):
         result_json_path.append({'problem_id':item["problem_id"],'user_id':item["user_id"],"flag":flag,"result_list":item_result_list})
         #idx += 1 复用文件
         num += 1
-        print(num)
-        if num%100 == 0:
+        #print(num)
+        if num%1000 == 0:
             json.dump(
                 result_json_path,
                 open(out_dir, 'w'),
@@ -164,8 +165,10 @@ def eval_style_sim(real_distribution_path, predict_distribution_path):
     real_distribution_list = []
     predict_distribution_list = []
     correct_list = []
+    real_correct_list = []
     for item in real_distribution_map:
         real_distribution_list.append(item["result_list"])
+        real_correct_list.append(item["flag"])
     for item in predict_distribution_map:
         predict_distribution_list.append(item["result_list"])
         correct_list.append(item["flag"])
@@ -177,7 +180,7 @@ def eval_style_sim(real_distribution_path, predict_distribution_path):
         real_list = real_distribution_list[i]
         predict_list = predict_distribution_list[i]
         
-        if correct_list[i] == False: continue
+        if correct_list[i] == False or real_correct_list[i] == False: continue
         record_num += 1
         
         real_numpy = np.array(real_list)

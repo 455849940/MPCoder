@@ -18,4 +18,11 @@ canshu.txt
 result.txt
 *.md
 *.txt
-
+./check/process/data
+check/process/prefer_predict_result
+check/process/base_predict_result
+check/process/nohup.out
+StylePrompt/stylePrompt_model
+StylePrompt/tmp*
+StylePrompt/torch*
+StylePrompt/pymp*

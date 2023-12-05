@@ -76,8 +76,8 @@ def PreferLlama_eval(json_patch):
     for (k, v) in rouge_map.items():
          print('{} {:7.4f}'.format(k, v))
 if __name__ == "__main__":
-    #baseline_eval("/home/develop/dzl/PreferCodeLlama/baseLlama/out_predict/result_base_30.json")
-    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_style_model_linear_30_batch4.json") 
+    #baseline_eval("/home/develop/dzl/PreferCodeLlama/baseLlama/out_predict/result_base_all.json")
+    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/augT_result_liear_e4_contrast.json") 
     
     #PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part_frozzeall.json")  
          
