@@ -6,7 +6,7 @@ from feature_arguments import train_config
 import torch
 import transformers 
 from transformers import LlamaTokenizer,Trainer
-from load_data import processClass
+from load_user_data import processClass
 from FeatureModel import PreferFeatureCodeLlama
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -58,12 +58,21 @@ def generate(model, tokenizer, args, batch):
         #model forward 自回归生成tokens
         
         in_tokens = tokens[:, 0:min_prompt_len]
-
+        
+        #pad_tokens = torch.full((batch_size, padding_size), pad_token_id, dtype=torch.long, device="cuda") 
+        #select_tokens = torch.cat([select_mask, pad_tokens], dim=1)
+        in_select_mask = select_mask[:, 0:min_prompt_len]
+        
+        
         kvcache = None
         for cur_pos in range(min_prompt_len, total_len):
             #print(cur_pos)
+            # print(select_mask.shape)
+            # print(in_tokens.shape)
+            # print(in_select_mask.shape)
+            # input()
             
-            modeling_outputs, P_final = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,select_mask = select_mask,past_key_values=kvcache) #think
+            modeling_outputs, P_final = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,select_mask = in_select_mask,past_key_values=kvcache) #think
             #logits = modeling_outputs.logits
             kvcache = modeling_outputs.past_key_values
             next_token = torch.argmax(P_final[:, -1], dim=-1)  
@@ -146,7 +155,7 @@ def filte_code(text):
     
 def predict(model, train_config, test_dataloader, tokenizer):
     
-     
+    model.forwardChoose = 1
     model.eval()
     
     generation_json = []

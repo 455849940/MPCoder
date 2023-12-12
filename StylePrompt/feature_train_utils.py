@@ -26,7 +26,6 @@ from torch.distributed.fsdp import (
 import functools
 
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer,LlamaRMSNorm,LlamaForCausalLM
-from model_aug import MLP
 from torch.distributed.fsdp.wrap import (
     transformer_auto_wrap_policy,
     size_based_auto_wrap_policy,
@@ -65,14 +64,14 @@ def load_model_checkpoint(model, rank,output_dir):
     model.load_state_dict(model_checkpoint)
     print(f"model checkpoint loaded in {model_checkpoint_dir}")
     return model
- 
-   
+
+
 def F_train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_scheduler, gradient_accumulation_steps, train_config, fsdp_config=None, local_rank=None, rank=None):
     """
     Trains the model on the given dataloader
     """
-  
-   
+
+
     
     if train_config.enable_fsdp:
         world_size = int(os.environ["WORLD_SIZE"])
@@ -100,7 +99,7 @@ def F_train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sc
             model.train()
             total_loss = 0.0
             total_length = len(train_dataloader)//gradient_accumulation_steps
-            eval_interval = total_length//2  # 设置每隔多少个训练批次进行一次验证
+            eval_interval = total_length//1  # 设置每隔多少个训练批次进行一次验证
             pbar = tqdm(colour="blue", desc=f"Training Epoch: {epoch+1}", total=total_length, dynamic_ncols=True, leave=is_main_process)    
             for step, batch in enumerate(train_dataloader):
                 if quit_flag == True: break 
@@ -115,7 +114,7 @@ def F_train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sc
                     select_mask = batch['select_mask'].cuda()
                 
                 result = model(user_id = None,input_ids = input_ids,attention_mask = attention_mask,select_mask = select_mask, past_key_values = None)
-              
+
                 loss = result["loss"]
                 loss = loss / gradient_accumulation_steps
                 total_loss += loss.detach().float()

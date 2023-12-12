@@ -74,6 +74,8 @@ class processClass:
     def get_instruction(self, user_id,input, answer,language, is_test = False):
         user_style_description = self.get_user_style_description(user_id)
         instruction =B_SYS + f"Give you a programming question and corresponding user code style conventions, please give the corresponding user style answer in {language}"+ E_SYS + user_style_description+input
+        #instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + user_style_description+input
+        #instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language},Wrap your code answer using ```"+ E_SYS + user_style_description+input
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
         else:
@@ -205,7 +207,7 @@ class processClass:
         eval_dataset = TextRewardDataset(eval_data_list, tokenizer)    
         return eval_dataset
     
-    def get_test_datasets(self,args, tokenizer, is_test = True):
+    def get_test_datasets(self,args, tokenizer, is_test = True, rank = 0):
         all_test_data = []
         for data_path in args.test_data_path:
             test_data_list = self.load_text_score_dataset(
@@ -216,7 +218,8 @@ class processClass:
                 debug=args.debug_mode,
                 padding=not args.per_device_test_batch_size == 1,
                 batch_size = args.per_device_test_batch_size,
-                is_test = is_test
+                is_test = is_test, 
+                rank = 0
             )
             all_test_data.extend(test_data_list)
         test_dataset = TextRewardDataset(test_data_list, tokenizer)    

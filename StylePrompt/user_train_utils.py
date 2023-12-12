@@ -117,8 +117,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                 loss = result["loss"]
                 loss = loss / gradient_accumulation_steps
                 total_loss += loss.detach().float()
-                if train_config.choose_model_name == "perfer_Aug":
-                    total_para += result["para"]
+                
                 # regular backpropagation when fp16 is not used
                 loss.backward()
                 if (step + 1) % gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
@@ -135,10 +134,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
         # Reducing total_loss across all devices if there's more than one CUDA device
         if torch.cuda.device_count() > 1 and train_config.enable_fsdp:
             dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)
-            if train_config.choose_model_name == "perfer_Aug":
-                dist.all_reduce(total_para, op=dist.ReduceOp.SUM)
-                if rank == 0:
-                    print(f"Training Epoch: {epoch+1} :para is {total_para.item()/torch.cuda.device_count()}")
+            
             
         train_epoch_loss = total_loss / len(train_dataloader)
         if train_config.enable_fsdp:

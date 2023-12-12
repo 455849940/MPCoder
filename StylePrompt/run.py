@@ -19,6 +19,7 @@ import torch.distributed as dist
 from configs.fsdp import fsdp_config
 from torch.distributed.fsdp import (
     FullyShardedDataParallel as FSDP,
+    CPUOffload
 )
 
 def print_trainable_parameters(model):
@@ -42,6 +43,7 @@ def main():
         local_rank = int(os.environ["LOCAL_RANK"])
         rank = int(os.environ["RANK"])
         world_size = int(os.environ["WORLD_SIZE"])
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
     if torch.distributed.is_initialized():
         torch.cuda.set_device(local_rank)
         clear_gpu_cache(local_rank)
@@ -56,28 +58,29 @@ def main():
         )    
     # load feature data
     #---------------------------------------------------------------------------------  
-    Feature_proc = FeatureProcessClass(tokenizer)
-    train_Feature_data_set = Feature_proc.get_dataset(args,tokenizer,  choose = "train",is_test = False,rank = rank)
-    dev_Feature_data_set = Feature_proc.get_dataset(args,tokenizer,  choose = "dev", is_test = False,rank = rank)
-    train_Feature_sampler = None
-    dev_Feature_sampler = None
-    if train_config.enable_fsdp:
-        train_Feature_sampler = DistributedSampler(
-            train_Feature_data_set,
-            rank=dist.get_rank(),
-            num_replicas=dist.get_world_size(),
-            shuffle=True, #shuffle
-        )
-        if train_config.do_eval:
-            dev_Feature_sampler = DistributedSampler(
-                dev_Feature_data_set,
+    if args.do_train_first:
+        Feature_proc = FeatureProcessClass(tokenizer)
+        train_Feature_data_set = Feature_proc.get_dataset(args,tokenizer,  choose = "train",is_test = False,rank = rank)
+        dev_Feature_data_set = Feature_proc.get_dataset(args,tokenizer,  choose = "dev", is_test = False,rank = rank)
+        train_Feature_sampler = None
+        dev_Feature_sampler = None
+        if train_config.enable_fsdp:
+            train_Feature_sampler = DistributedSampler(
+                train_Feature_data_set,
                 rank=dist.get_rank(),
                 num_replicas=dist.get_world_size(),
+                shuffle=True, #shuffle
             )
-    
-    
-    F_train_dataloader = DataLoader(train_Feature_data_set , batch_size=args.per_device_feature_train_batch_size, collate_fn=train_Feature_data_set.collate_batch, num_workers=4,sampler=train_Feature_sampler)
-    F_eval_dataloader = DataLoader(dev_Feature_data_set , batch_size=args.per_device_feature_dev_batch_size, collate_fn=dev_Feature_data_set.collate_batch, num_workers=4,sampler=dev_Feature_sampler)
+            if train_config.do_eval:
+                dev_Feature_sampler = DistributedSampler(
+                    dev_Feature_data_set,
+                    rank=dist.get_rank(),
+                    num_replicas=dist.get_world_size(),
+                )
+        
+        
+        F_train_dataloader = DataLoader(train_Feature_data_set , batch_size=args.per_device_feature_train_batch_size, collate_fn=train_Feature_data_set.collate_batch, num_workers=4,sampler=train_Feature_sampler)
+        F_eval_dataloader = DataLoader(dev_Feature_data_set , batch_size=args.per_device_feature_dev_batch_size, collate_fn=dev_Feature_data_set.collate_batch, num_workers=4,sampler=dev_Feature_sampler)
     
     # load data
     #---------------------------------------------------------------------------------  
@@ -88,7 +91,7 @@ def main():
         print(idnum)
         print("--------")
     eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False,rank = rank)
-    args.idnum = proc.idnum
+    args.idnum = 5
     #--------------------------------------------------------------------------------- 
     
 
@@ -187,7 +190,7 @@ def main():
             model = FSDP(
                 model,
                 auto_wrap_policy= wrapping_policy,
-                cpu_offload=None, #CPUOffload(offload_params=True)
+                cpu_offload= CPUOffload(offload_params=True),
                 mixed_precision= mixed_precision_policy,
                 sharding_strategy=fsdp_config.sharding_strategy,
                 device_id=torch.cuda.current_device(),

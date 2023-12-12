@@ -101,10 +101,10 @@ class FeatureProcessClass:
      
     def get_feature_instruction(self, code1, code2,Style_list1, Style_list2, addtional_feature, is_test = False):
         input = f"code1:```\n{code1}```\nlist1:{Style_list1}\ncode2:```\n{code2}```\nlist2:{Style_list2}\n"
-        instruction =B_SYS + f"To you are given two pieces of code, code1 and code2, along with their corresponding lists of style conventions, list1 and list2. Please identify and explain the style conventions in list2 that are not present in list1."+ E_SYS + input
+        instruction =B_SYS + f"You are given two pieces of code, code1 and code2, along with their corresponding lists of style conventions, list1 and list2. Please identify and explain the style conventions in list2 that are not present in list1."+ E_SYS + input
         
         explan = self.style_meaning_map[addtional_feature]
-        answer = f"{addtional_feature} is present in list1 but not in list2; the styling convention for {addtional_feature} indicates '{explan}'"
+        answer = f"{addtional_feature} is present in list2 but not in list1; the style convention of {addtional_feature} indicates '{explan}'"
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
         else:

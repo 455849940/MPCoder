@@ -160,13 +160,16 @@ class PreferFeatureCodeLlama(nn.Module):
         if past_key_values is None: #输入句子
             select_emd = self.Style_embeddings(select_mask)
             select_condition = select_mask.unsqueeze(2)
-            
+            #print(select_condition.shape)
+            #print(w_emd.shape)
+            #print(select_emd.shape)
+            #input()
             input_emd = torch.where(select_condition == 0, w_emd, select_emd) #把风格位置插入风格向量
             new_input_ids = torch.where(select_mask == 0, input_ids, -100)  #把风格位置Token换成-100
         else:
             input_emd = w_emd
             new_input_ids = input_ids
-            
+        
         if self.forwardChoose == 1:
             return self.forwardB(user_id, input_emd, new_input_ids, attention_mask, past_key_values)
         else:
