@@ -91,20 +91,22 @@ def main():
         print(idnum)
         print("--------")
     eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False,rank = rank)
-    args.idnum = 5
+    idnum = 50
+    args.idnum = idnum 
     #--------------------------------------------------------------------------------- 
     
 
     model = PreferFeatureCodeLlama(args)
     
-    if args.continue_train == True:
-        if args.do_train_first:
-            model = load_model_checkpoint(model, 0, args.output_dir)
-        else:
-            model = load_model_checkpoint(model, 0, args.output_dir2)
+
     
     #print_trainable_parameters(model)
-    if args.do_train_first:      
+    if args.do_train_first:    
+        if args.continue_train == True:
+            model = load_model_checkpoint(model, 0, args.output_dir)
+        
+        
+        
         if args.freezeLM:
              for name, param in model.named_parameters():
                 if "Style_embeddings" in name : continue
@@ -138,14 +140,15 @@ def main():
     # build model and trainer
     #---------------------------------------------------------------------------------
 
-    optimizer = optim.AdamW(
+    
+        
+    if args.do_train_first:
+        optimizer = optim.AdamW(
             model.parameters(),
             lr=args.learning_rate,
             weight_decay=args.weight_decay,
         )
-    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
-        
-    if args.do_train_first:
+        scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
         results = F_train(
             model,
             F_train_dataloader,
@@ -166,8 +169,17 @@ def main():
     
     
     if args.do_train_second:
+        print("stage 2")
         #inint model
         #---------------------------------------------------------------------------------
+        if args.do_train_first == False:
+            if args.continue_train == True:
+                model = load_model_checkpoint(model, 0, args.output_dir2)
+            else:
+                model = load_model_checkpoint(model, 0, args.output_dir)
+        
+        
+        
         model.set_forwardChoose(1)
         if args.freezeLM:
             for name, param in model.named_parameters():
@@ -182,11 +194,11 @@ def main():
                 else:
                     param.requires_grad =False
                     
-        if args.do_train_first == False and args.continue_train == False:
-            model = load_model_checkpoint(model, 0, args.output_dir)
+        if args.do_train_first == False:
+            
             #fsdp_config.choose_model_name = args.choose_model_name
             mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
-            print("1", local_rank, rank)
+            print("2", local_rank, rank)
             model = FSDP(
                 model,
                 auto_wrap_policy= wrapping_policy,
@@ -228,6 +240,14 @@ def main():
         
         train_dataloader = DataLoader(train_data_set , batch_size=args.per_device_train_batch_size, collate_fn=train_data_set.collate_batch, num_workers=4,sampler=train_sampler if train_sampler else None)
         eval_dataloader = DataLoader(eval_dataset_set , batch_size=args.per_device_eval_batch_size, collate_fn=train_data_set.collate_batch, num_workers=4,sampler=val_sampler if val_sampler else None)
+        
+        
+        optimizer2 = optim.AdamW(
+            model.parameters(),
+            lr=args.learning_rate,
+            weight_decay=args.weight_decay,
+        )
+        scheduler2 = StepLR(optimizer2, step_size=1, gamma=args.gamma)
         #train
         #---------------------------------------------------------------------------------
         results = train(
@@ -235,8 +255,8 @@ def main():
             train_dataloader,
             eval_dataloader,
             tokenizer,
-            optimizer,
-            scheduler,
+            optimizer2,
+            scheduler2,
             args.gradient_accumulation_steps,
             args,
             fsdp_config if train_config.enable_fsdp else None,

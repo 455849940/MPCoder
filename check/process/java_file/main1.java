@@ -1,24 +1,15 @@
 import java.util.Scanner;
 
-public class Main{
-    public static void main(String[] args){
-        Scanner sc = new Scanner(System.in);
-        int num = sc.nextInt();
-        if(num<=0){
-            System.out.println("error");
-        }else if(Tool.isPower(num)){
-            System.out.println("yes");
-        }else{
-            System.out.println("no");
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        String end = "end";
+        String current = "";
+        while (!current.equals(end)) {
+            current = scanner.nextLine();
+            if (current.length() % 3 == 0) {
+                System.out.print(current + " ");
+            }
         }
-    }
-}
-
-class Tool{
-    public static boolean isPower(int num){
-        if(num%2==0){
-            return isPower(num/2);
-        }
-        return true;
     }
 }

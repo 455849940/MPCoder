@@ -1,0 +1,18 @@
+cpp_file/main1.cpp:0:  No copyright message found.  You should have a line: "Copyright [year] <Copyright Owner>"  [legal/copyright] [5]
+cpp_file/main1.cpp:5:  Do not use namespace using-directives.  Use using-declarations instead.  [build/namespaces] [5]
+cpp_file/main1.cpp:6:  Missing space before {  [whitespace/braces] [5]
+cpp_file/main1.cpp:7:  Missing space after ,  [whitespace/comma] [3]
+cpp_file/main1.cpp:8:  Missing spaces around >>  [whitespace/operators] [3]
+cpp_file/main1.cpp:10:  Missing spaces around >>  [whitespace/operators] [3]
+cpp_file/main1.cpp:11:  Missing spaces around =  [whitespace/operators] [4]
+cpp_file/main1.cpp:11:  Missing spaces around <  [whitespace/operators] [3]
+cpp_file/main1.cpp:11:  Missing space before ( in for(  [whitespace/parens] [5]
+cpp_file/main1.cpp:11:  Missing space after ;  [whitespace/semicolon] [3]
+cpp_file/main1.cpp:11:  Missing space before {  [whitespace/braces] [5]
+cpp_file/main1.cpp:12:  Missing spaces around !=  [whitespace/operators] [3]
+cpp_file/main1.cpp:12:  Missing space before ( in if(  [whitespace/parens] [5]
+cpp_file/main1.cpp:13:  { should almost always be at the end of the previous line  [whitespace/braces] [4]
+cpp_file/main1.cpp:14:  Missing spaces around <<  [whitespace/operators] [3]
+cpp_file/main1.cpp:18:  Could not find a newline character at the end of the file.  [whitespace/ending_newline] [5]
+Done processing cpp_file/main1.cpp
+Total errors found: 16

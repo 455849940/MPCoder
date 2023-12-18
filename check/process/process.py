@@ -8,12 +8,12 @@ import scipy.stats
 import io
 import os
 from tqdm import tqdm
-prefer_predict_json_path = "./data/augT_result_liear_e4_contrast.json"
-base_predict_json_patch = "./data/result_base_all.json"
+prefer_predict_json_path = "./data/result_style_model_new_50_e5.json"
+base_predict_json_patch = "./data/result_new_50.json"
 
-real_out_dir = "./prefer_predict_result/real_result_list_all.json"
-base_out_dir = "./base_predict_result/base_result_list_all.json"
-prefer_out_dir = "./prefer_predict_result/style_model_e4_result_list_all.json"
+real_out_dir = "./prefer_predict_result/real_result_list_50.json"
+base_out_dir = "./base_predict_result/base_result_list_50.json"
+prefer_out_dir = "./prefer_predict_result/result_style_model_new_result_list_50.json"
 def inint_style_map():
     initial_value = 0
     keys = ['RightCurly','SeparatorWrap','NoLineWrapCheck', 'AvoidStarImportCheck', 'OneTopLevelClassCheck',
@@ -45,7 +45,8 @@ def run_shell_command(your_shell_command):
         #stdout_output = process.stdout
         #print(process.stderr)
         stderr_output = process.stderr.readlines()
-        
+        #print(str(stderr_output))
+        #input()
         if len(str(stderr_output)) != 2:
             #print("hhh")
             return False
@@ -97,7 +98,7 @@ def get_Style_result(code, idx, style_map):
     Create_file(code.replace('\\\\\"', '\\"'), file_name)
     
     #2.用命令行执行javawenjian来生成对应xml文件
-    your_shell_command = f"java -jar ./checkstyle-10.12.4-all.jar -c ./google_checks.xml ./java_file/main{idx}.java -f xml -o ./xml_file/result{idx}.xml"
+    your_shell_command = f"java -Djava.io.tmpdir=./ -jar  ./checkstyle-10.12.4-all.jar -c ./google_checks.xml ./java_file/main{idx}.java -f xml -o ./xml_file/result{idx}.xml "
     result_xml = f"./xml_file/result{idx}.xml"
     
     flag = run_shell_command(your_shell_command)

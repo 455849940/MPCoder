@@ -16,8 +16,6 @@ model_aug_contrast.py
 plan.txt
 canshu.txt
 result.txt
-*.md
-*.txt
 ./check/process/data
 check/process/prefer_predict_result
 check/process/base_predict_result
@@ -26,3 +24,7 @@ StylePrompt/stylePrompt_model
 StylePrompt/tmp*
 StylePrompt/torch*
 StylePrompt/pymp*
+tmp*
+torch*
+pymp*
+

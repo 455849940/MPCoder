@@ -84,7 +84,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
     checkpoint_times = []
     results = {}
     best_val_loss = float("inf")
-    if train_config.continue_train == "True":
+    if train_config.continue_train == True:
         eval_ppl, eval_epoch_loss = evaluation(model, train_config, eval_dataloader, tokenizer, local_rank)
         best_val_loss = eval_epoch_loss
         if rank==0:
