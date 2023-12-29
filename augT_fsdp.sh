@@ -3,9 +3,9 @@ CUDA_VISIBLE_DEVICES=1,2,3,5 torchrun --master_port=65532 --nproc_per_node 4 mai
     --do_train True \
     --do_eval True \
     --debug_mode False\
-    --learning_rate 1e-5\
+    --learning_rate 1e-4\
     --per_device_train_batch_size 1 \
-    --per_device_eval_batch_size 3 \
+    --per_device_eval_batch_size 2 \
     --num_train_epochs 20 \
     --choose_model_name perfer_AugT\
     --output_dir augT_model_linear_part \

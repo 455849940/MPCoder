@@ -65,6 +65,7 @@ def generate(model, tokenizer, args, batch):
         
         
         kvcache = None
+        args.forwardChoose = model.forwardChoose
         for cur_pos in range(min_prompt_len, total_len):
             #print(cur_pos)
             # print(select_mask.shape)
@@ -72,10 +73,18 @@ def generate(model, tokenizer, args, batch):
             # print(in_select_mask.shape)
             # input()
             
-            modeling_outputs, P_final = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,select_mask = in_select_mask,past_key_values=kvcache) #think
-            #logits = modeling_outputs.logits
-            kvcache = modeling_outputs.past_key_values
-            next_token = torch.argmax(P_final[:, -1], dim=-1)  
+            if args.forwardChoose == 1:
+                modeling_outputs, P_final = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,select_mask = in_select_mask,past_key_values=kvcache) #think
+                #logits = modeling_outputs.logits
+                kvcache = modeling_outputs.past_key_values
+                next_token = torch.argmax(P_final[:, -1], dim=-1)  
+            elif args.forwardChoose == 2:
+                modeling_outputs = model(user_id = user_id,input_ids = in_tokens,attention_mask = None,select_mask = in_select_mask,past_key_values=kvcache) #think
+                #logits = modeling_outputs.logits
+                kvcache = modeling_outputs.past_key_values
+                logits = modeling_outputs.logits
+                next_token = torch.argmax(logits[:, -1], dim=-1)
+                
             next_token = next_token.reshape(-1)
             # only replace token if prompt has already been generated
             
@@ -216,7 +225,8 @@ def main():
     train_data_set = proc.get_train_dataset(args,tokenizer, is_test = False)
     eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False)
     test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
-    args.idnum = proc.idnum
+    #args.idnum = proc.idnum
+    args.idnum = 50
     print(f"user number = {args.idnum}")
     test_dataloader = DataLoader(test_data_set , batch_size=args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
     

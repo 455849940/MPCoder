@@ -16,6 +16,11 @@ class train_config(TrainingArguments):
         metadata={"help": "forwardChoose [0,1]"}
     )
     
+    forwardChoose2: int = field(
+        default= 1, 
+        metadata={"help": "forwardChoose2 [0,1]"}
+    )
+    
     # model params
     alpha : float = field(
         default=0.1,
@@ -87,7 +92,7 @@ class train_config(TrainingArguments):
     
     output_dir2: str = field(
         default="stylePrompt_model/stylePrompt_modelB", 
-        metadata={"help": "output_dir"}
+        metadata={"help": "output_dir2"}
     )
     
     predict_dirs: str = field(
@@ -148,6 +153,7 @@ class train_config(TrainingArguments):
     
     
     # training hyperparams
+    learning_rate2:float = field(default=1e-5, metadata={"help": "model stage 2 learining_rate"})
     num_feature_train_epochs: int = field(default= 30,metadata={"help": "num_feature_train_epochs."})
     
     per_device_feature_train_batch_size: int = field(default= 2,metadata={"help": "per_device_feature_train_batch_size."})

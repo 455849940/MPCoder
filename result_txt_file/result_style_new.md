@@ -383,7 +383,7 @@ rouge_l/r_score  0.5301
 rouge_l/p_score  0.6609
 total_eval_val:0.7369926822460217
 ---------------------
-style model 
+style model e-5
 bleu-4 = 0.6383676512794505
 rouge_1/f_score  0.5100
 rouge_1/r_score  0.4919
@@ -397,7 +397,7 @@ rouge_l/p_score  0.6477
 fail_convert_java_cont:8
 total_eval_val:0.770802851696928
 -----------------------
-augT 50
+augT 50 e-5
 bleu-4 = 0.6404101943922246
 rouge_1/f_score  0.5118
 rouge_1/r_score  0.4917
@@ -411,7 +411,8 @@ rouge_l/p_score  0.6617
 fail_convert_java_cont:6
 total_eval_val:0.7786908365386372
 ----------------------
-new 50
+new 50 model_all_e4
+数据1024版 1e-4 /e-5
 bleu-4 = 0.6405012442135231
 rouge_1/f_score  0.5120
 rouge_1/r_score  0.4907
@@ -425,3 +426,49 @@ rouge_l/p_score  0.6534
 fail_convert_java_cont:4
 total_eval_val:0.7673130767169989
 -------------------------
+数据2048版 1e-4 batch8/ e-5
+bleu-4 = 0.6376077982587522
+rouge_1/f_score  0.5158
+rouge_1/r_score  0.4979
+rouge_1/p_score  0.5566
+rouge_2/f_score  0.3797
+rouge_2/r_score  0.3653
+rouge_2/p_score  0.4199
+rouge_l/f_score  0.5361
+rouge_l/r_score  0.5847
+rouge_l/p_score  0.6628
+fail_convert_java_cont:6
+total_eval_val:0.7941000273665125
+-------------------------
+数据2048版 1e-5 / e-5
+bleu-4 = 0.6309824220215244
+rouge_1/f_score  0.5049
+rouge_1/r_score  0.4805
+rouge_1/p_score  0.5510
+rouge_2/f_score  0.3682
+rouge_2/r_score  0.3487
+rouge_2/p_score  0.4122
+rouge_l/f_score  0.5368
+rouge_l/r_score  0.5821
+rouge_l/p_score  0.6621
+fail_convert_java_cont:5
+total_eval_val:0.7578695394199609
+-------------------------
+
+
+-------------------------
+
+
+
+-----------------------------------------
+可以考虑dev用5的 train用4的 data3
+list len not big than 4(3 = 4-1)
+
+------------------------------------------------
+还不行就减少数据量 1024版本
+---------------------------------------------
+还不行 1-》2残差
+-----------------------------------------------
+还不行 就不残差 单个单个学
+
+--------------------

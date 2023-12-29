@@ -8,18 +8,30 @@ import scipy.stats
 import io
 import os
 from tqdm import tqdm
-prefer_predict_json_path = "./data/result_style_model_new_50_e5.json"
+prefer_predict_json_path = "./data/style_promot_MSA_part50_spc.json"
 base_predict_json_patch = "./data/result_new_50.json"
 
-real_out_dir = "./prefer_predict_result/real_result_list_50.json"
+real_out_dir = "./prefer_predict_result/50/real_result_list_50.json"
 base_out_dir = "./base_predict_result/base_result_list_50.json"
-prefer_out_dir = "./prefer_predict_result/result_style_model_new_result_list_50.json"
+prefer_out_dir = "./prefer_predict_result/50/style_promot_MSA_part50_spc.json"
 def inint_style_map():
     initial_value = 0
     keys = ['RightCurly','SeparatorWrap','NoLineWrapCheck', 'AvoidStarImportCheck', 'OneTopLevelClassCheck',
             'EmptyLineSeparatorCheck', 'WhitespaceAroundCheck', 'GenericWhitespaceCheck',
             'OperatorWrapCheck','LineLengthCheck','LeftCurlyCheck', 'EmptyBlockCheck',
             'NeedBracesCheck', 'IndentationCheck', 'MultipleVariableDeclarationsCheck',
+            'OneStatementPerLineCheck','UpperEllCheck', 'ModifierOrderCheck', 
+            'FallThroughCheck','MissingSwitchDefaultCheck', 
+            'TypeNameCheck', 'MethodNameCheck','MemberNameCheck', 'ParameterNameCheck', 'LocalVariableNameCheck']
+    style_map = {key: initial_value for key in keys}
+    return style_map
+
+def inint_new_style_map():
+    initial_value = 0
+    keys = ['RightCurly','SeparatorWrap','NoLineWrapCheck', 'AvoidStarImportCheck', 'OneTopLevelClassCheck',
+            'EmptyLineSeparatorCheck', 'WhitespaceAroundCheck', 'GenericWhitespaceCheck',
+            'OperatorWrapCheck','LineLengthCheck','LeftCurlyCheck', 'EmptyBlockCheck',
+            'NeedBracesCheck', 'MultipleVariableDeclarationsCheck',
             'OneStatementPerLineCheck','UpperEllCheck', 'ModifierOrderCheck', 
             'FallThroughCheck','MissingSwitchDefaultCheck', 
             'TypeNameCheck', 'MethodNameCheck','MemberNameCheck', 'ParameterNameCheck', 'LocalVariableNameCheck']
@@ -126,6 +138,7 @@ def get_predict_java_list(predict_json_path,is_true, out_dir):
             #print(code)
         else:
             code = item["code_reply"]
+           
         item_result_list,flag = get_Style_result(code, idx, style_map)
         if flag == False:
             fail_convert_java_cont += 1
@@ -160,6 +173,16 @@ def JS_divergence(p,q):
     M=(p+q)/2
     return 0.5*scipy.stats.entropy(p,M)+0.5*scipy.stats.entropy(q, M)
 
+def get_filt_result_distribution(result_list,style_map,new_map):
+    idx = 0
+    style_list = []
+    for key,value in style_map.items():
+        if key in new_map:
+            style_list.append(result_list[idx])
+        idx += 1
+    
+    return style_list
+
 def eval_style_sim(real_distribution_path, predict_distribution_path):
     real_distribution_map = load_json_data(real_distribution_path)
     predict_distribution_map = load_json_data(predict_distribution_path)
@@ -167,11 +190,18 @@ def eval_style_sim(real_distribution_path, predict_distribution_path):
     predict_distribution_list = []
     correct_list = []
     real_correct_list = []
+    
+    map1 = inint_style_map()
+    map2 = inint_new_style_map()  
     for item in real_distribution_map:
-        real_distribution_list.append(item["result_list"])
+        #input_item = item["result_list"]
+        input_item = get_filt_result_distribution(item["result_list"],map1,map2)
+        real_distribution_list.append(input_item)
         real_correct_list.append(item["flag"])
     for item in predict_distribution_map:
-        predict_distribution_list.append(item["result_list"])
+        #input_item = item["result_list"]
+        input_item = get_filt_result_distribution(item["result_list"],map1,map2)
+        predict_distribution_list.append(input_item)
         correct_list.append(item["flag"])
     record_len = len(real_distribution_list)
     total_eval_val = 0.0
@@ -224,10 +254,14 @@ if __name__ == "__main__":
     #get_predict_java_list(base_predict_json_patch,False,base_out_dir)
     #eval_style_sim(real_out_dir, base_out_dir)
     
-    #get_predict_java_list(prefer_predict_json_path,False,prefer_out_dir)
+    get_predict_java_list(prefer_predict_json_path,False,prefer_out_dir)
     eval_style_sim(real_out_dir, prefer_out_dir)
-   
     
+    # result = [ 0 for i in range(0,25)]
+    # map1 = inint_style_map()
+    # map2 = inint_new_style_map()
+    # s = get_filt_result_distribution(result, map1, map2)
+    # print(len(s))
     
  
    

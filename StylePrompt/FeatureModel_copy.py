@@ -179,11 +179,9 @@ class PreferFeatureCodeLlama(nn.Module):
         
         if self.forwardChoose == 1:
             return self.forwardB(user_id, input_emd, new_input_ids, attention_mask, past_key_values)
-        elif self.forwardChoose == 0:
+        else:
             return self.forwardA(input_emd, new_input_ids, attention_mask, past_key_values)
-        elif self.forwardChoose == 2:
-            return self.forwardsp(user_id,input_emd, new_input_ids, attention_mask, past_key_values)
-        
+            
     def forwardA(self, src_emd, input_ids, attention_mask, past_key_values = None):   
         ignore_index = -100
         text = input_ids
@@ -307,47 +305,4 @@ class PreferFeatureCodeLlama(nn.Module):
                 story_loss =  story_loss +  self.alpha * contrast_loss
             
             return {"loss":story_loss}
-        
-    def forwardsp(self, user_id, w_emd, input_ids, attention_mask, past_key_values = None):
-        
-        ignore_index = -100
-        text = input_ids
-        mask = attention_mask
-        batch_size = user_id.size(0)
-        user_id = user_id * self.user_len
-        user_id_sql = torch.Tensor(user_id.unsqueeze(1).repeat(1, self.user_len).view(-1, self.user_len)).cuda()
-        add_id_sql = torch.arange(0, self.user_len).cuda()
-        id_sql = user_id_sql + add_id_sql
-        u_emd = self.user_embeddings(id_sql)
-        
-        if past_key_values is None:
-            src_emd = torch.cat([u_emd, w_emd], 1)  # (batch_size, total_len, emsize)
-        else:
-            src_emd = w_emd
-            
-        if mask is None:
-            # auto-regressive generation
-            modeling_outputs = self.model.forward(inputs_embeds=src_emd,past_key_values = past_key_values)
-            return modeling_outputs
-        else:
-            pad_left = torch.ones((batch_size, self.user_len)).cuda()
-            pad_mask = torch.cat([pad_left, mask], 1)  # (batch_size, total_len)
-            
-            # prediction for training
-            pred_left = torch.full((batch_size, self.user_len), ignore_index, dtype=torch.int64).cuda()  # (batch_size, src_len)
-            pred_right = torch.where(mask == 1, text, torch.tensor(ignore_index).cuda())  # replace <pad> with ignore_index
-            newlabels = torch.cat([pred_left, pred_right], 1)
-            
-            output = self.model(
-                #input_ids=input_ids,
-                inputs_embeds = src_emd,
-                attention_mask = pad_mask,
-                labels= newlabels,
-                return_dict = True
-            )
-            
-            loss = output.loss
-          
-            
-            return {"loss":loss}
         

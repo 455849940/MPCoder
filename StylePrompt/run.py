@@ -91,11 +91,11 @@ def main():
         print(idnum)
         print("--------")
     eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False,rank = rank)
-    idnum = 50
+    #idnum = 1121
     args.idnum = idnum 
     #--------------------------------------------------------------------------------- 
     
-
+    
     model = PreferFeatureCodeLlama(args)
     
 
@@ -177,10 +177,10 @@ def main():
                 model = load_model_checkpoint(model, 0, args.output_dir2)
             else:
                 model = load_model_checkpoint(model, 0, args.output_dir)
+        #args.idnum = 1121
+        #model.set_usermedding(args)
         
-        
-        
-        model.set_forwardChoose(1)
+        model.set_forwardChoose(args.forwardChoose2)
         if args.freezeLM:
             for name, param in model.named_parameters():
                 if "Style_embeddings" in name : 
@@ -202,7 +202,7 @@ def main():
             model = FSDP(
                 model,
                 auto_wrap_policy= wrapping_policy,
-                cpu_offload= CPUOffload(offload_params=True),
+                cpu_offload= None,#CPUOffload(offload_params=True),
                 mixed_precision= mixed_precision_policy,
                 sharding_strategy=fsdp_config.sharding_strategy,
                 device_id=torch.cuda.current_device(),
@@ -244,7 +244,7 @@ def main():
         
         optimizer2 = optim.AdamW(
             model.parameters(),
-            lr=args.learning_rate,
+            lr=args.learning_rate2,
             weight_decay=args.weight_decay,
         )
         scheduler2 = StepLR(optimizer2, step_size=1, gamma=args.gamma)

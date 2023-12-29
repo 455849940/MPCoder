@@ -1,42 +1,12 @@
 [
     {
         "problem_id": "1309111933359218688",
-        "user_id": "45",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(1 + \"+\" + 2 + \"+\" + 3 + \"+\" + ... + n + \"=\" + sum);\n    }\n}"
+        "user_id": "31",
+        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scan = new Scanner(System.in);\n        int n = scan.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(n + \"+\" + (n-1) + \"+\" + (n-2) + \"+\" + ... + \"+\" + 1 + \"=\" + sum);\n    }\n}"
     },
     {
-        "problem_id": "1309111933359218688",
-        "user_id": "49",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(1 + \"+\" + 2 + \"+\" + ... + n + \"=\" + sum);\n    }\n}"
-    },
-    {
-        "problem_id": "1070566438679273472",
-        "user_id": "29",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scan = new Scanner(System.in);\n        int a = scan.nextInt();\n        int n = scan.nextInt();\n        int sn = 0;\n        for (int i = 1; i <= n; i++) {\n            sn += a * 10 * 10 * ... * 10 (n-1 times);\n        }\n        System.out.println(sn);\n    }\n}"
-    },
-    {
-        "problem_id": "1309111933359218688",
-        "user_id": "10",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(1 + \"+\" + 2 + \"+\" + ... + n + \"=\" + sum);\n    }\n}"
-    },
-    {
-        "problem_id": "1309111933359218688",
-        "user_id": "23",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(1 + \"+\" + 2 + \"+\" + ... + n + \"=\" + sum);\n    }\n}"
-    },
-    {
-        "problem_id": "1309111933359218688",
-        "user_id": "1",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(1 + \"+\" + 2 + \"+\" + ... + n + \"=\" + sum);\n    }\n}"
-    },
-    {
-        "problem_id": "1309111933359218688",
-        "user_id": "48",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(1 + \"+\" + 2 + \"+\" + ... + n + \"=\" + sum);\n    }\n}"
-    },
-    {
-        "problem_id": "1309111933359218688",
+        "problem_id": "1070670787053019136",
         "user_id": "30",
-        "code_reply": "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            sum += i;\n        }\n        System.out.println(1 + \"+\" + 2 + \"+\" + ... + n + \"=\" + sum);\n    }\n}"
+        "code_reply": "import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        String input = scanner.nextLine();\n        wordPositions(input);\n    }\n\n    public static void wordPositions(String sentence) {\n        int wordStart = 0;\n        int wordLength = 0;\n        int wordPosition = 0;\n        int wordCount = 0;\n        int wordLengthMax = 0;\n        int wordPositionMax = 0;\n        int wordPositionMin = 0;\n        int wordLengthMin = 0;\n        int wordPositionAverage = 0;\n        int wordLengthAverage = 0;\n        int wordPositionStandardDeviation = 0;\n        int wordLengthStandardDeviation = 0;\n        int wordPositionVariance = 0;\n        int wordLengthVariance = 0;\n        int wordPositionSquare = 0;\n        int wordLengthSquare = 0;\n        int wordPositionCube = 0;\n        int wordLengthCube = 0;\n        int wordPositionFourth = 0;\n        int wordLengthFourth = 0;\n        int wordPositionFifth = 0;\n        int wordLengthFifth = 0;\n        int wordPositionSixth = 0;\n        int wordLengthSixth = 0;\n        int wordPositionSeventh = 0;\n        int wordLengthSeventh = 0;\n        int wordPositionEighth = 0;\n        int wordLengthEighth = 0;\n        int wordPositionNinth = 0;\n        int wordLengthNinth = 0;\n        int wordPositionTenth = 0;\n        int wordLengthTenth = 0;\n        int wordPositionEleventh = 0;\n        int wordLengthEleventh = 0;\n        int wordPositionTwelfth = 0;\n        int wordLengthTwelfth = 0;\n        int wordPositionThirteenth = 0;\n        int wordLengthThirteenth = 0;\n        int wordPositionFourteenth = 0;\n        int wordLengthFourteenth = 0;\n        int wordPositionFifteenth = 0;\n        int wordLengthFifteenth = 0;\n        int wordPositionSixteenth = 0;\n        int wordLengthSixteenth = 0;\n        int wordPositionSeventeenth = 0;\n        int wordLengthSeventeenth = 0;\n        int wordPositionEighteenth = 0;\n        int wordLengthEighteenth = 0;\n        int wordPositionNineteenth = 0;\n        int wordLengthNineteenth = 0;\n        int wordPositionTwentieth = 0;\n        int wordLengthTwentieth = 0;\n        int wordPositionTwentyFirst = 0;\n        int wordLengthTwentyFirst = 0;\n        int wordPositionTwentySecond = 0;\n        int wordLengthTwentySecond = 0;\n        int wordPositionTwentyThird = 0;\n        int wordLengthTwentyThird = 0;\n        int wordPositionTwentyFourth = 0;\n        int wordLengthTwentyFourth = 0;\n        int wordPositionTwentyFifth = 0;\n        int wordLengthTwentyFifth = 0;\n        int wordPositionTwentySixth = 0;\n        int wordLengthTwentySixth = 0;\n        int wordPositionTwentySeventh = 0;\n        int wordLengthTwentySeventh = 0;\n        int wordPositionTwentyEighth = 0;\n        int wordLengthTwentyEighth = 0;\n        int wordPositionTwentyNinth = 0;\n        int wordLengthTwentyNinth = 0;\n        int wordPositionThirtieth = 0;\n        int wordLengthThirtieth = 0;\n        int wordPositionThirtyFirst = 0;\n        int wordLengthThirtyFirst = 0;\n        int wordPositionThirtySecond = 0;\n        int wordLengthThirtySecond = 0;\n        int wordPositionThirtyThird = 0;"
     }
 ]
