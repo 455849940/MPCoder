@@ -59,7 +59,7 @@ class ContrastLoss(nn.Module):
         positives_mask = mask * logits_mask
         negatives_mask = 1. - mask
         
-        num_positives_per_row  = torch.sum(positives_mask , axis=1) # 除了自己之外，正样本的个数  [2 0 2 2]       
+        num_positives_per_row  = torch.sum(positives_mask , axis=1) # 正样本的个数  [2 0 2 2]       
         denominator = torch.sum(
         exp_logits * negatives_mask, axis=1, keepdims=True) + torch.sum(
             exp_logits * positives_mask, axis=1, keepdims=True)  

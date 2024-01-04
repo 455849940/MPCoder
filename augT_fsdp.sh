@@ -1,5 +1,5 @@
 export NCCL_P2P_DISABLE=1
-CUDA_VISIBLE_DEVICES=1,2,3,5 torchrun --master_port=65532 --nproc_per_node 4 main.py \
+CUDA_VISIBLE_DEVICES=1,2,3 torchrun --master_port=65532 --nproc_per_node 3 main.py \
     --do_train True \
     --do_eval True \
     --debug_mode False\
@@ -12,5 +12,5 @@ CUDA_VISIBLE_DEVICES=1,2,3,5 torchrun --master_port=65532 --nproc_per_node 4 mai
     --train_data_path ./data/Java_part_programming50/Java_programming_train.json \
     --eval_data_path ./data/Java_part_programming50/Java_programming_dev.json \
     --continue_train False \
-    --enable_contrast True \
+    --enable_contrast False \
     --alpha 0.5

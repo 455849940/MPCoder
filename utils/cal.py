@@ -78,7 +78,7 @@ def PreferLlama_eval(json_patch):
 if __name__ == "__main__":
     #baseline_eval("/home/develop/dzl/PreferCodeLlama/baseLlama/out_predict/result_new_50.json")
     print("jo")
-    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/50/style_promot_MSA_part50_spc.json") 
+    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/style_promot_MSA_part50_BqI.json") 
     
     #PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part_frozzeall.json")  
          

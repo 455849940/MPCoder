@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=4 python predict.py \
+CUDA_VISIBLE_DEVICES=1 python predict.py \
     --debug_mode False \
     --learning_rate 1e-4 \
     --per_device_test_batch_size 3 \
@@ -7,5 +7,5 @@ CUDA_VISIBLE_DEVICES=4 python predict.py \
     --train_data_path ./data/Java_part_programming50/Java_programming_train.json \
     --eval_data_path ./data/Java_part_programming50/Java_programming_dev.json \
     --test_data_path ./data/Java_part_programming50/Java_programming_test.json \
-    --predict_dirs  ./out_predict/augT_result_linear_new_50_e4.json \
+    --predict_dirs  ./out_predict/augT_result_linear_new_50_e4_noD.json \
     --human_eval_out_path ./out_predict/humeval_result_aug_model_3.jsonl

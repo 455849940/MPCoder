@@ -8,12 +8,12 @@ import scipy.stats
 import io
 import os
 from tqdm import tqdm
-prefer_predict_json_path = "./data/style_promot_MSA_part50_spc.json"
+prefer_predict_json_path = "./data/style_promot_MSA_all_BqI.json"
 base_predict_json_patch = "./data/result_new_50.json"
 
-real_out_dir = "./prefer_predict_result/50/real_result_list_50.json"
-base_out_dir = "./base_predict_result/base_result_list_50.json"
-prefer_out_dir = "./prefer_predict_result/50/style_promot_MSA_part50_spc.json"
+real_out_dir = "./prefer_predict_result/real_result_list_all.json"
+base_out_dir = "./base_predict_result/base_result_list_all.json"
+prefer_out_dir = "./prefer_predict_result/style_promot_MSA_all_BqI.json"
 def inint_style_map():
     initial_value = 0
     keys = ['RightCurly','SeparatorWrap','NoLineWrapCheck', 'AvoidStarImportCheck', 'OneTopLevelClassCheck',

@@ -225,8 +225,8 @@ def main():
     train_data_set = proc.get_train_dataset(args,tokenizer, is_test = False)
     eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False)
     test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
-    #args.idnum = proc.idnum
-    args.idnum = 50
+    args.idnum = proc.idnum
+    #args.idnum = 50
     print(f"user number = {args.idnum}")
     test_dataloader = DataLoader(test_data_set , batch_size=args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
     

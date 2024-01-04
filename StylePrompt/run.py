@@ -91,7 +91,7 @@ def main():
         print(idnum)
         print("--------")
     eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False,rank = rank)
-    #idnum = 1121
+    idnum = 50
     args.idnum = idnum 
     #--------------------------------------------------------------------------------- 
     
@@ -177,8 +177,8 @@ def main():
                 model = load_model_checkpoint(model, 0, args.output_dir2)
             else:
                 model = load_model_checkpoint(model, 0, args.output_dir)
-        #args.idnum = 1121
-        #model.set_usermedding(args)
+        args.idnum = 1121
+        model.set_usermedding(args)
         
         model.set_forwardChoose(args.forwardChoose2)
         if args.freezeLM:
