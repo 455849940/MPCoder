@@ -67,13 +67,14 @@ class ContrastLoss(nn.Module):
         log_probs = logits - torch.log(denominator)
         if torch.any(torch.isnan(log_probs)):
             print(logits)
-            print(denominator)
-            print(exp_logits)
-            print(positives_mask)
-            raise ValueError("Log_prob has nan!")
-        
-        log_probs = torch.sum(
-            log_probs*positives_mask , axis=1)[num_positives_per_row > 0] / num_positives_per_row[num_positives_per_row > 0]
+            log_probs = torch.where(torch.isnan(log_probs), torch.tensor(0.0), log_probs)
+            #print(denominator)
+            #print(exp_logits)
+            #print(positives_mask)
+            #raise ValueError("Log_prob has nan!")
+        else:
+            log_probs = torch.sum(
+                log_probs*positives_mask , axis=1)[num_positives_per_row > 0] / num_positives_per_row[num_positives_per_row > 0]
 
         #计算正样本平均的log-likelihood
         

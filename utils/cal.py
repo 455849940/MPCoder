@@ -75,10 +75,11 @@ def PreferLlama_eval(json_patch):
     
     for (k, v) in rouge_map.items():
          print('{} {:7.4f}'.format(k, v))
+         
 if __name__ == "__main__":
-    #baseline_eval("/home/develop/dzl/PreferCodeLlama/baseLlama/out_predict/result_new_50.json")
+    #baseline_eval("/home/develop/dzl/PreferCodeLlama/baseLlama/out_predict/base_Long50.json")
     print("jo")
-    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/style_promot_MSA_part50_BqI.json") 
+    PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/softprompt_Short1121.json") 
     
     #PreferLlama_eval("/home/develop/dzl/PreferCodeLlama/out_predict/result_part_frozzeall.json")  
          

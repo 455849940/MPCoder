@@ -111,6 +111,17 @@ class FeatureProcessClass:
             text = f"{B_INST} {(instruction).strip()} {E_INST} {(answer).strip()} </s>"
         return text 
     
+    def get_feature_instruction_NResidual(self, code1, code2,Style_list1, Style_list2, addtional_feature, is_test = False):
+        input = f"code:```\n{code1}```\n"
+        instruction =B_SYS + f"You are given one piece of code along with their corresponding style convention. Please identify and explain the style convention."+ E_SYS + input
+        
+        explan = self.style_meaning_map[addtional_feature]
+        answer = f"{addtional_feature} is present in code; the style convention of {addtional_feature} indicates '{explan}'"
+        if is_test:
+            text = f"{B_INST} {(instruction).strip()} {E_INST}"
+        else:
+            text = f"{B_INST} {(instruction).strip()} {E_INST} {(answer).strip()} </s>"
+        return text 
     
     def prepare_feature_data_item(self, items, tokenizer=None,  is_test = False):
         data_list = []

@@ -32,11 +32,21 @@ class TextRewardDataset(Dataset):
             labels_batch = []
             instruction_list = []
             problem_id_batch = []
+            ori_userid_batch = []
+            create_at = []
+            problem_set_problem_id = []
+
+      
             for item in batch:
                 id_batch.append(item['user_id'])
                 instruction_list.append(item['input'])
                 labels_batch.append(item['code']) 
                 problem_id_batch.append(item['problem_id'])
+                
+                ori_userid_batch.append(item['ori_userid'])
+                create_at.append(item['create_at'])
+                problem_set_problem_id.append(item['problem_set_problem_id'])
+                
             encoded_inputs = self.tokenizer(instruction_list,padding=True,return_tensors='pt')
             input_ids_batch = encoded_inputs["input_ids"]
             attention_mask_batch = encoded_inputs["attention_mask"]
@@ -48,7 +58,10 @@ class TextRewardDataset(Dataset):
                 "attention_mask": attention_mask_batch,
                 "code_labels": labels_batch,
                 "problem_id": problem_id_batch,
-                "select_mask": select_mask_batch
+                "select_mask": select_mask_batch,
+                "ori_userid":ori_userid_batch,
+                "create_at":create_at,
+                "problem_set_problem_id":problem_set_problem_id
             }
             
     
@@ -73,6 +86,8 @@ class processClass:
         return user_style
     def get_instruction(self, user_id,input, answer,language, is_test = False):
         user_style_description = self.get_user_style_description(user_id)
+        #print(type(user_style_description))
+        #input()
         instruction =B_SYS + f"Give you a programming question and corresponding user code style conventions, please give the corresponding user style answer in {language}"+ E_SYS + user_style_description+input
         #instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + user_style_description+input
         #instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language},Wrap your code answer using ```"+ E_SYS + user_style_description+input
@@ -102,6 +117,10 @@ class processClass:
             new_items['problem_id'] = items[i]['problem_id']
             
             new_items['input'] = self.get_instruction(user_id,problem_content[i], new_items['code'], language,is_test) 
+            
+            new_items['ori_userid'] = items[i]['user_id']
+            new_items['create_at'] = items[i]['create_at']
+            new_items['problem_set_problem_id'] = items[i]['problem_set_problem_id']
             #print(new_items['input'])
             #input()
             text = tokenizer(new_items['input'],return_tensors='pt')

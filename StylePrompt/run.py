@@ -10,6 +10,7 @@ from torch.utils.data import DistributedSampler
 from load_feature_data import FeatureProcessClass
 from load_user_data import processClass
 from FeatureModel import PreferFeatureCodeLlama
+from FeatureModel_M import PreferFeatureCodeLlama_M
 from feature_train_utils import load_model_checkpoint,F_train
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -56,10 +57,13 @@ def main():
                 "pad_token": "<PAD>",
             }
         )    
-    # load feature data
+    print(len(tokenizer))
+    
+    # load feature data and add tokenizer
+    Feature_proc = FeatureProcessClass(tokenizer)
+    print(len(tokenizer))
     #---------------------------------------------------------------------------------  
-    if args.do_train_first:
-        Feature_proc = FeatureProcessClass(tokenizer)
+    if args.do_train_first:   
         train_Feature_data_set = Feature_proc.get_dataset(args,tokenizer,  choose = "train",is_test = False,rank = rank)
         dev_Feature_data_set = Feature_proc.get_dataset(args,tokenizer,  choose = "dev", is_test = False,rank = rank)
         train_Feature_sampler = None
@@ -91,12 +95,14 @@ def main():
         print(idnum)
         print("--------")
     eval_dataset_set = proc.get_eval_datasets(args,tokenizer,  is_test = False,rank = rank)
-    idnum = 50
+    #idnum = 50
     args.idnum = idnum 
     #--------------------------------------------------------------------------------- 
     
-    
-    model = PreferFeatureCodeLlama(args)
+    if args.choose_model_M:
+        model = PreferFeatureCodeLlama_M(args)
+    else:
+        model = PreferFeatureCodeLlama(args)
     
 
     
@@ -147,6 +153,7 @@ def main():
             model.parameters(),
             lr=args.learning_rate,
             weight_decay=args.weight_decay,
+            #eps=1e-4,
         )
         scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
         results = F_train(
@@ -177,26 +184,41 @@ def main():
                 model = load_model_checkpoint(model, 0, args.output_dir2)
             else:
                 model = load_model_checkpoint(model, 0, args.output_dir)
-        args.idnum = 1121
-        model.set_usermedding(args)
+        #args.idnum = 1121
+        #model.set_usermedding(args)
         
         model.set_forwardChoose(args.forwardChoose2)
-        if args.freezeLM:
-            for name, param in model.named_parameters():
-                if "Style_embeddings" in name : 
-                    param.requires_grad = False
-                else:
-                    param.requires_grad = True
-                    
-            for name, param in model.model.named_parameters():
-                if "lm_head" in name or "model.norm" in name: 
-                    param.requires_grad =True
-                else:
-                    param.requires_grad =False
-                    
-        if args.do_train_first == False:
+        if args.forwardChoose2 == 1:
+            if args.freezeLM:
+                for name, param in model.named_parameters():
+                    if "Style_embeddings" in name : 
+                        param.requires_grad = False
+                    else:
+                        param.requires_grad = True
+                        
+                for name, param in model.model.named_parameters():
+                    if "lm_head" in name or "model.norm" in name: 
+                        param.requires_grad =True
+                    else:
+                        param.requires_grad =False
+        elif args.forwardChoose2 == 2:
+            if args.freezeLM:
+                for name, param in model.named_parameters():
+                    if "user_embeddings" in name : 
+                        param.requires_grad = True
+                    else:
+                        param.requires_grad = False
+                        
+                for name, param in model.model.named_parameters():
+                    if "lm_head" in name or "model.norm" in name: 
+                        param.requires_grad =True
+                    else:
+                        param.requires_grad =False 
+                             
+        
             
-            #fsdp_config.choose_model_name = args.choose_model_name
+        #fsdp_config.choose_model_name = args.choose_model_name
+        if args.do_train_first == False: 
             mixed_precision_policy, wrapping_policy = get_policies(fsdp_config, rank)
             print("2", local_rank, rank)
             model = FSDP(
@@ -210,16 +232,16 @@ def main():
                 sync_module_states= False,
                 param_init_fn= None,
             )   
-        
-                     
-        if not train_config.enable_fsdp or rank == 0:
-                print_trainable_parameters(model)
-        on_gpu = all(param.is_cuda for param in model.parameters())
-        if rank == 0:
-            if on_gpu:
-                print("模型在 GPU 上运行。")
-            else:
-                print("模型在 CPU 上运行。")
+            
+                
+            if not train_config.enable_fsdp or rank == 0:
+                    print_trainable_parameters(model)
+            on_gpu = all(param.is_cuda for param in model.parameters())
+            if rank == 0:
+                if on_gpu:
+                    print("模型在 GPU 上运行。")
+                else:
+                    print("模型在 CPU 上运行。")
         ## create dataloader
         #---------------------------------------------------------------------------------                
         train_sampler = None
@@ -246,6 +268,7 @@ def main():
             model.parameters(),
             lr=args.learning_rate2,
             weight_decay=args.weight_decay,
+            #eps = 1e-6
         )
         scheduler2 = StepLR(optimizer2, step_size=1, gamma=args.gamma)
         #train

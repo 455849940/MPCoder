@@ -81,7 +81,7 @@ def F_train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sc
     checkpoint_times = []
     results = {}
     best_val_loss = float("inf")
-    early_stop_patience = 1  # 当连续3次验证集性能没有提升时停止训练
+    early_stop_patience = 1  # 当连续1次验证集性能没有提升时停止训练
     early_stop_counter = 0
     quit_flag = False
     if train_config.continue_train == True :

@@ -27,4 +27,9 @@ StylePrompt/pymp*
 tmp*
 torch*
 pymp*
-
+/style_model
+baseLlama/
+/augT_model_linear
+/nouse
+/process_data
+/tmp_file

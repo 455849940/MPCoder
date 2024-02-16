@@ -28,49 +28,73 @@ class ContrastLoss(nn.Module):
         输出:
             loss值
         """
-        
+     
         features_q = F.normalize(features_q, p=2, dim=1)
         batch_size = features_q.shape[0]
+        #features_p = F.normalize(features_p, p=2, dim=1) #后加的
+        
         # 关于labels参数
         if labels is not None and mask is not None:  # labels和mask不能同时定义值，因为如果有label，那么mask是需要根据Label得到的
-            raise ValueError('Cannot define both `labels` and `mask`') 
+            print('Cannot define both `labels` and `mask`') 
         elif labels is None and mask is None: # 如果没有labels，也没有mask，就是无监督学习，mask是对角线为1的矩阵，表示(i,i)属于同一类
             mask = torch.eye(batch_size, dtype=torch.float32).cuda()
         elif labels is not None: # 如果给出了labels, mask根据label得到，两个样本i,j的label相等时，mask_{i,j}=1
             labels = labels.contiguous().view(-1, 1)
             if labels.shape[0] != batch_size:
-                raise ValueError('Num of labels does not match num of features_q')
+                print('Num of labels does not match num of features_q')
             mask = torch.eq(labels, labels.T).float().cuda()
  
         else:
             mask = mask.float().cuda()
-        
+        if torch.any(torch.isnan(features_q)):
+            print("features_q has nan!")
+        if torch.any(torch.isnan(features_p)):
+            print("features_p has nan!")
         # compute logits
         anchor_dot_contrast = torch.div(
             torch.matmul(features_q, features_p.T),
             self.temperature)  # 计算两两样本间点乘相似度
+        
+        if torch.any(torch.isnan(anchor_dot_contrast)):
+            anchor_dot_contrast = torch.div(
+            torch.matmul(features_q, features_p.T),
+            1.0)  # 计算两两样本间点乘相似度
+            if torch.any(torch.isnan(anchor_dot_contrast)):
+                print("anchor_dot_contrast still has nan!")
+            print("anchor_dot_contrast has nan!")
+        
         # for numerical stability
         logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
         logits = anchor_dot_contrast - logits_max.detach()
-        exp_logits = torch.exp(logits)
-       
+        exp_logits = torch.exp(logits) #[1,inf)
+
+        if torch.any(torch.isnan(exp_logits)):
+            print(anchor_dot_contrast)
+            print(logits)
+            print(exp_logits)
+            print("exp_logits has nan!")
         # 构建mask 
         logits_mask = torch.ones_like(mask) #- torch.eye(batch_size)     
         positives_mask = mask * logits_mask
         negatives_mask = 1. - mask
         
-        num_positives_per_row  = torch.sum(positives_mask , axis=1) # 除了自己之外，正样本的个数  [2 0 2 2]       
+        num_positives_per_row  = torch.sum(positives_mask , axis=1) # 正样本的个数  [2 0 2 2]       
         denominator = torch.sum(
         exp_logits * negatives_mask, axis=1, keepdims=True) + torch.sum(
             exp_logits * positives_mask, axis=1, keepdims=True)  
+        if torch.any(torch.isnan(denominator)):
+            print(anchor_dot_contrast)
+            print(logits)
+            print(exp_logits)
+            print("exp_logits has nan!")
         
         log_probs = logits - torch.log(denominator)
         if torch.any(torch.isnan(log_probs)):
-            print(logits)
             print(denominator)
-            print(exp_logits)
-            print(positives_mask)
-            raise ValueError("Log_prob has nan!")
+            print(logits)
+            print(log_probs)
+            print("Log_prob has nan!")
+            
         
         log_probs = torch.sum(
             log_probs*positives_mask , axis=1)[num_positives_per_row > 0] / num_positives_per_row[num_positives_per_row > 0]
@@ -177,12 +201,12 @@ class PreferFeatureCodeLlama(nn.Module):
             input_emd = w_emd
             new_input_ids = input_ids
         
-        if self.forwardChoose == 1:
-            return self.forwardB(user_id, input_emd, new_input_ids, attention_mask, past_key_values)
+        if self.forwardChoose == 1: 
+            return self.forwardB(user_id, input_emd, new_input_ids, attention_mask, past_key_values) #第二阶段训练加预测 
         elif self.forwardChoose == 0:
-            return self.forwardA(input_emd, new_input_ids, attention_mask, past_key_values)
+            return self.forwardA(input_emd, new_input_ids, attention_mask, past_key_values) #仅供第一阶段残差向量训练
         elif self.forwardChoose == 2:
-            return self.forwardsp(user_id,input_emd, new_input_ids, attention_mask, past_key_values)
+            return self.forwardsp(user_id,input_emd, new_input_ids, attention_mask, past_key_values) #训练加预测sp（训练）+残差(冻结)的  多个user_id
         
     def forwardA(self, src_emd, input_ids, attention_mask, past_key_values = None):   
         ignore_index = -100
@@ -281,13 +305,15 @@ class PreferFeatureCodeLlama(nn.Module):
             temp = torch.relu(self.p_linear1(P_Style))    # [batch_size, seq_len, bart_last_hidden/SCALE]
             p = self.p_linear2((temp + self.p_linear3(hidden_states[-1])) / 2) # [batch_size, seq_len, vocab_size]
             p = torch.sigmoid(p)
+            
             P_final = p * P_Style + (1-p) * P_base     
             P_final = P_final / P_final.sum(dim=-1, keepdim=True)
-            P_final = P_final.log()
             
+            
+            P_final2 = P_final.log()
             
             # Flatten the tokens
-            shift_P_final = P_final[..., :-1, :].contiguous()
+            shift_P_final = P_final2[..., :-1, :].contiguous()
             shift_labels = newlabels[..., 1:].contiguous()
             
             
@@ -297,6 +323,8 @@ class PreferFeatureCodeLlama(nn.Module):
             shift_labels = shift_labels.to(shift_P_final.device)
             
             story_loss = self.story_loss_fn(shift_P_final,shift_labels)
+            
+            
             if self.enable_contrast:
                 u_prompt = torch.mean(u_emd,dim=1)
                 #Style_hidden_states = torch.mean(average_sequence_tensors,dim=1)
@@ -304,8 +332,9 @@ class PreferFeatureCodeLlama(nn.Module):
                 Style_hidden_states_batch = gather_all_with_local_grad(average_sequence_tensors)
                 user_id_batch = gather_all_with_local_grad(user_id)
                 contrast_loss = self.ContrastLoss(u_prompt_batch,Style_hidden_states_batch,labels = user_id_batch)
+                
                 story_loss =  story_loss +  self.alpha * contrast_loss
-            
+                
             return {"loss":story_loss}
         
     def forwardsp(self, user_id, w_emd, input_ids, attention_mask, past_key_values = None):

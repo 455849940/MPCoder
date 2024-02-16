@@ -224,8 +224,8 @@ def load_json_data(data_path):
             data_list.append(data)
     return data_list
 
-def get_instruction(input, answer,language, is_test = False):
-        instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + input
+def get_instruction1(input, answer,language, is_test = False):
+        instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}."+ E_SYS + input
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
         else:
@@ -233,7 +233,7 @@ def get_instruction(input, answer,language, is_test = False):
         return text 
           
 def get_instruction2(input, answer,language, is_test = False):
-        instruction =B_SYS + f"Give you a piece of {language} code, please continue to write the unfinished function "+ E_SYS + input
+        instruction =B_SYS + f"Give you a piece of {language} code, please continue to write the unfinished function. "+ E_SYS + input
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
         else:
@@ -254,15 +254,16 @@ def human_eval():
             {
                 "pad_token": "<PAD>",
             }
-        )        
-    args.idnum = 50
+        )  
+    if args.human_eval == False:
+        return   
+        
+    args.idnum = 1121
     print(f"user number = {args.idnum}")
     # inint model
     #---------------------------------------------------------------------------------
     if args.choose_model_name == "perfer_Base":
         model = PreferCodeLlama(args)
-    elif args.choose_model_name =="perfer_Aug":
-        model = PreferAugCodeLlama(args)
     elif args.choose_model_name =="perfer_AugT":
         model = PreferAugTCodeLlama(args)
     model = load_model_checkpoint(model, 0, args)
@@ -272,22 +273,25 @@ def human_eval():
         print("模型在 GPU 上运行。")
     else:
         print("模型在 CPU 上运行。")
-    print_trainable_parameters(model)  
+    #print_trainable_parameters(model)  
     model.eval()
     
     test_list = load_json_data("./data/humaneval_java.jsonl")
     print(args.human_eval_out_path)
     generation_json = []
-    user_id = -1
+    user_id = args.human_uid
     for step, item in enumerate(tqdm(test_list,colour="green", desc="predict Epoch", dynamic_ncols=True)):
         with MemoryTrace() as memtrace:
-            #print(item)
-            user_id = (user_id + 1)% args.idnum
+
             batch = {}
             batch['user_id'] = [user_id]
-            encoded_inputs = tokenizer(get_instruction3(item['prompt'],"","Java", True),padding=True,return_tensors='pt')
-            #print(get_instruction(item['prompt'],"",True))
-            #input()
+            if args.human_prompt_uid == 1:
+                fun = get_instruction1
+            elif args.human_prompt_uid == 2:
+                fun = get_instruction2
+            else:
+                fun = get_instruction3
+            encoded_inputs = tokenizer(fun(item['prompt'],"","Java", True),padding=True,return_tensors='pt')
             batch['input_ids'] = encoded_inputs["input_ids"]
             batch['attention_mask'] = encoded_inputs["attention_mask"]
             batch_item = {
@@ -306,23 +310,17 @@ def human_eval():
                 code_generation = filte_code(code_generation)
                 item_code = {"user_id":str(user_id),"task_id":item['task_id'],"generation": code_generation,"prompt":item['prompt']}
                 generation_json.append(item_code)
-            with open(args.human_eval_out_path, 'w') as file:
-                for item in generation_json:
-                    json.dump(item, file)
-                    file.write('\n')    
-    with open(args.human_eval_out_path, 'w') as file:
+                
+    human_eval_out_path = args.human_eval_out_path + f"humaneval_user{user_id}.jsonl"
+    with open(human_eval_out_path, 'w') as file:
         for item in generation_json:
             json.dump(item, file)
             file.write('\n')     
-   
-   
-    
-        
-    
+
 
 def main():
 
-    #os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
     torch.cuda.empty_cache()
     parser = transformers.HfArgumentParser(train_config)
     args = parser.parse_args_into_dataclasses()[0]
@@ -346,6 +344,8 @@ def main():
     test_data_set = proc.get_test_datasets(args,tokenizer,is_test = True)    
     args.idnum = proc.idnum
     print(f"user number = {args.idnum}")
+    #proc.restore_idmap()
+    #input()
     test_dataloader = DataLoader(test_data_set , batch_size=args.per_device_test_batch_size, collate_fn=test_data_set.collate_batch, num_workers=4)
     #print(tokenizer.pad_token_id)
 

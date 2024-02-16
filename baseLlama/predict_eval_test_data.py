@@ -163,15 +163,15 @@ def predict_eval_test_data(out_predict__path, mode = "filt"):
         ensure_ascii=False
     )
 
-def get_instruction(input, language, is_test = False):
-        instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + input
+def get_instruction1(input, language, is_test = False):
+        instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}.  Wrap your code answer using ```."+ E_SYS + input
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
        
         return text 
  
 def get_instruction2(input, language, is_test = False):
-        instruction =B_SYS + f"Give you a piece of {language} code, please continue to write the unfinished function "+ E_SYS + input
+        instruction =B_SYS + f"Give you a piece of {language} code, please continue to write the unfinished function.  Wrap your code answer using ```."+ E_SYS + input
         if is_test:
             text = f"{B_INST} {(instruction).strip()} {E_INST}"
         return text 
@@ -209,7 +209,7 @@ def generate_humeval_data(data_path):
     generation_json = []
     for item in tqdm(data_list):
         inputs = item['prompt']
-        text = get_instruction3(inputs,language="Java",is_test=True)
+        text = get_instruction2(inputs,language="Java",is_test=True)
         text = tokenizer(text,return_tensors='pt')
         input_ids = text['input_ids'].cuda()
         task_id = item['task_id']
@@ -225,7 +225,7 @@ def generate_humeval_data(data_path):
                 for item in generation_json:
                     json.dump(item, file)
                     file.write('\n')
-    with open("./out_predict/humaneval_java_base_model_test.jsonl", 'w') as file:
+    with open("./out_predict/humaneval_basemodel_P1.jsonl", 'w') as file:
         for item in generation_json:
             json.dump(item, file)
             file.write('\n')
@@ -255,18 +255,15 @@ def re_generate_json(data_path):
         item['generation'] = filte_code(item['generation'])
         generation_json.append(item)
         indx += 1
-    with open("./out_predict/humeval_java_base_use.jsonl", 'w') as file:
+    with open("./out_predict/humeval_java_base_use_test.jsonl", 'w') as file:
         for item in generation_json:
             json.dump(item, file)
             file.write('\n')       
     
 if __name__ == "__main__":
     #print("start")
-    predict_eval_test_data(out_predict__path = "./out_predict/result_new_50.json")
-    #text ="import java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    /**\n    Check if in given list of numbers, are any two numbers closer to each other than given threshold.\n    >>> hasCloseElements(Arrays.asList(1.0, 2.0, 3.0), 0.5)\n    false\n    >>> hasCloseElements(Arrays.asList(1.0, 2.8, 3.0, 4.0, 5.0, 2.0), 0.3)\n    true\n     */\n    public boolean hasCloseElements(List<Double> numbers, double threshold) {\n        for (int i = 0; i < numbers.size() - 1; i++) {\n            for (int j = i + 1; j < numbers.size(); j++) {\n                if (Math.abs(numbers.get(i) - numbers.get(j)) < threshold) {\n                    return true;\n                }\n            }\n        }\n        return false;\n    }\n}", "prompt": "import java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    /**\n    Check if in given list of numbers, are any two numbers closer to each other than given threshold.\n    >>> hasCloseElements(Arrays.asList(1.0, 2.0, 3.0), 0.5)\n    false\n    >>> hasCloseElements(Arrays.asList(1.0, 2.8, 3.0, 4.0, 5.0, 2.0), 0.3)\n    true\n     */\n    public boolean hasCloseElements(List<Double> numbers, double threshold) {\n"}
-    #text = "import java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    public List<String> separateParenGroups(String paren_string) {\n        // Initialize an empty list to store the separated groups\n        List<String> separated_groups = new ArrayList<>();\n\n        // Initialize a stack to keep track of the opening parentheses\n        Stack<Character> opening_parens = new Stack<>();\n\n        // Iterate through the input string\n        for (char c : paren_string.toCharArray()) {\n            // If the current character is an opening parenthesis, push it to the stack\n            if (c == '(') {\n                opening_parens.push(c);\n            // If the current character is a closing parenthesis, pop the stack and add the group to the list\n            } else if (c == ')') {\n                opening_parens.pop();\n                separated_groups.add(paren_string.substring(opening_parens.size(), paren_string.length() - 1));\n            }\n        }\n\n        // Return the list of separated groups\n        return separated_groups;\n    }\n}"
-    #print(text)
-    #generate_humeval_data("./humaneval/humaneval_java.jsonl")
+    #predict_eval_test_data(out_predict__path = "./out_predict/base_Long50.json")
+    generate_humeval_data("./humaneval/humaneval_java.jsonl")
     #add_prompt("./humaneval/humaneval_java.jsonl","./out_predict/humeval_java_base_fix.jsonl")
     #text = "[INST] <<SYS>>\nGive you a Programming problem,please Provide answers in Java\n<</SYS>>\n\nimport java.util.*;\nimport java.lang.*;\n\nclass Solution {\n    /**\n    Return length of given string\n    >>> strlen(\"\")\n    0\n    >>> strlen(\"abc\")\n    3\n     */\n    public int strlen(String string) { [/INST]  To get the length of a string in Java, you can use the `length()` method of the `String` class.\n\nHere's an example:\n```\nString str = \"Hello, World!\";\nint length = str.length();\nSystem.out.println(length); // Output: 12\n```\nAlternatively, you can also use the `length()` method of the `StringBuilder` class, which is more efficient for large strings:\n```\nStringBuilder sb = new StringBuilder(\"Hello, World!\");\nint length = sb.length();\nSystem.out.println(length); // Output: 12\n```\nNote that the `length()` method returns the number of characters in the string, not the number of bytes. If you need to get the number of bytes, you can use the `getBytes()` method of the `String` class, which returns a `byte[]` array:\n```\nString str = \"Hello, World!\";\nbyte[] bytes = str.getBytes();\nSystem.out.println(bytes.length); // Output: 13\n```\nIn this case, the `length()` method returns the number of bytes in the `byte[]` array, which is 13 in this case."
     #text1 = filte_code(text)

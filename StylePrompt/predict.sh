@@ -1,8 +1,10 @@
-CUDA_VISIBLE_DEVICES=1 python predict.py \
+CUDA_VISIBLE_DEVICES=6 python predict.py \
     --debug_mode False \
-    --output_dir2 ./stylePrompt_model/stylePrompt_modelB/part50_B \
+    --forwardChoose2 1 \
+    --output_dir2 ./stylePrompt_model/stylePrompt_modelB/Long50/MSAAdapterM55_noScaler  \
     --per_device_test_batch_size 4 \
-    --train_data_path ../data/Java_part_programming50/Java_programming_train.json \
-    --eval_data_path ../data/Java_part_programming50/Java_programming_dev.json \
-    --test_data_path ../data/Java_part_programming50/Java_programming_test.json \
-    --predict_dirs  ../out_predict/style_promot_MSA_part50_BqI.json 
+    --user_style_data_path ../data/Java_part_programmingLong50/user_style.json \
+    --train_data_path ../data/Java_part_programmingLong50/Java_programming_train.json \
+    --eval_data_path ../data/Java_part_programmingLong50/Java_programming_dev.json \
+    --test_data_path ../data/Java_part_programmingLong50/Java_programming_test.json \
+    --predict_dirs  ../out_predict/Long50_MSAAdapterM55_noScaler.json 

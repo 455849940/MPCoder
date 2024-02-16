@@ -86,6 +86,9 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
     
     if train_config.enable_fsdp:
         world_size = int(os.environ["WORLD_SIZE"])
+    if train_config.scaler:
+        scaler = ShardedGradScaler()
+        
     train_prep = []
     train_loss = []
     val_prep = []
@@ -122,16 +125,23 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                     attention_mask = batch['attention_mask'].cuda()
                          
                 result = model(user_id,input_ids,attention_mask, past_key_values = None)
-              
+
                 loss = result["loss"]
                 loss = loss / gradient_accumulation_steps
                 total_loss += loss.detach().float()
                 if train_config.choose_model_name == "perfer_Aug":
                     total_para += result["para"]
                 # regular backpropagation when fp16 is not used
-                loss.backward()
+                if train_config.scaler:
+                    scaler.scale(loss).backward()
+                else:
+                    loss.backward()  
                 if (step + 1) % gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
-                    optimizer.step()
+                    if train_config.scaler:
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        optimizer.step()
                     optimizer.zero_grad()
                     pbar.update(1)
 

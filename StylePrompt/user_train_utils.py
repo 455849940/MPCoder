@@ -7,7 +7,7 @@ import yaml
 from contextlib import nullcontext
 from pathlib import Path
 from pkg_resources import packaging
-
+import json
 from torch import nn
 import torch
 import torch.cuda.nccl as nccl
@@ -76,6 +76,8 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
     
     if train_config.enable_fsdp:
         world_size = int(os.environ["WORLD_SIZE"])
+    if train_config.scaler:
+        scaler = ShardedGradScaler()
     train_prep = []
     train_loss = []
     val_prep = []
@@ -90,38 +92,48 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
         if rank==0:
             print(f"continue_trian now best_val_loss ininit:{best_val_loss}")
     
-                    
+    
     for epoch in range(int(train_config.num_train_epochs)):
         epoch_start_time = time.perf_counter()
         with MemoryTrace() as memtrace:
             model.train()
             total_loss = 0.0
-            total_para = 0.0
             total_length = len(train_dataloader)//gradient_accumulation_steps
             pbar = tqdm(colour="blue", desc=f"Training Epoch: {epoch+1}", total=total_length, dynamic_ncols=True)
             for step, batch in enumerate(train_dataloader):
-                #print("here1")
-                total_para = 0.0
+
                 if train_config.enable_fsdp:
                     user_id = batch['user_id'].to(local_rank)
                     input_ids = batch['input_ids'].to(local_rank)
                     attention_mask = batch['attention_mask'].to(local_rank)
                     select_mask = batch['select_mask'].to(local_rank)
+                    labels_batch = batch['code_labels']
+                    problem_id_batch = batch['problem_id']
+                    create_at_batch = batch['create_at']
+                    ori_userid_batch = batch['ori_userid']
+                    problem_set_problem_id = batch['problem_set_problem_id']
                 else:
                     user_id = batch['user_id'].cuda()
                     input_ids = batch['input_ids'].cuda()
                     attention_mask = batch['attention_mask'].cuda()
                     select_mask = batch['select_mask'].cuda()
                 result = model(user_id,input_ids,attention_mask, select_mask = select_mask, past_key_values = None)
-              
                 loss = result["loss"]
                 loss = loss / gradient_accumulation_steps
                 total_loss += loss.detach().float()
                 
                 # regular backpropagation when fp16 is not used
-                loss.backward()
+                
+                if train_config.scaler:
+                    scaler.scale(loss).backward()
+                else:
+                    loss.backward()    
                 if (step + 1) % gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
-                    optimizer.step()
+                    if train_config.scaler:
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        optimizer.step()
                     optimizer.zero_grad()
                     pbar.update(1)
 
@@ -147,46 +159,46 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
         # Update the learning rate as needed
         lr_scheduler.step()
           
-        if train_config.do_eval:
-            eval_ppl, eval_epoch_loss = evaluation(model, train_config, eval_dataloader, tokenizer, local_rank)
-            checkpoint_start_time = time.perf_counter()
-            upp_epoch = -1 if not train_config.debug_mode else 0
-            if train_config.save_model and eval_epoch_loss < best_val_loss and epoch > upp_epoch:
-                if train_config.enable_fsdp:
-                    dist.barrier()
-                save_model_checkpoint(model,rank,train_config, epoch)
+        
+        eval_ppl, eval_epoch_loss = evaluation(model, train_config, eval_dataloader, tokenizer, local_rank)
+        
+        checkpoint_start_time = time.perf_counter()
+        if train_config.save_model and eval_epoch_loss < best_val_loss:
+            if train_config.enable_fsdp:
+                dist.barrier()
+            save_model_checkpoint(model,rank,train_config, epoch)
+            if rank==0:
+                print(" Saving the model checkpoints." + f"{epoch}")
+                print("=====================================================")                     
+            if train_config.enable_fsdp:
+                dist.barrier()
+        checkpoint_end_time = time.perf_counter() - checkpoint_start_time
+        checkpoint_times.append(checkpoint_end_time)
+        if eval_epoch_loss < best_val_loss:
+            best_val_loss = eval_epoch_loss
+            if train_config.enable_fsdp:
                 if rank==0:
-                    print(" Saving the model checkpoints." + f"{epoch}")
-                    print("=====================================================")                     
-                if train_config.enable_fsdp:
-                    dist.barrier()
-            checkpoint_end_time = time.perf_counter() - checkpoint_start_time
-            checkpoint_times.append(checkpoint_end_time)
-            if eval_epoch_loss < best_val_loss:
-                best_val_loss = eval_epoch_loss
-                if train_config.enable_fsdp:
-                    if rank==0:
-                        print(f"best eval loss on epoch {epoch+1} is {best_val_loss}")
-                else:
                     print(f"best eval loss on epoch {epoch+1} is {best_val_loss}")
-            val_loss.append(best_val_loss)
-            val_prep.append(eval_ppl)
-        if rank==0:
-            print(f"Epoch {epoch+1}: train_perplexity={train_perplexity:.4f}, train_epoch_loss={train_epoch_loss:.4f}, epoch time {epoch_end_time}s")
+            else:
+                print(f"best eval loss on epoch {epoch+1} is {best_val_loss}")
+        val_loss.append(best_val_loss)
+        val_prep.append(eval_ppl)
+    if rank==0:
+        print(f"Epoch {epoch+1}: train_perplexity={train_perplexity:.4f}, train_epoch_loss={train_epoch_loss:.4f}, epoch time {epoch_end_time}s")
     avg_epoch_time = sum(epoch_times)/ len(epoch_times)
     avg_checkpoint_time = sum(checkpoint_times)/ len(checkpoint_times) if len(checkpoint_times) > 0 else 0
     avg_train_prep = sum(train_prep)/len(train_prep)
     avg_train_loss = sum(train_loss)/len(train_loss)
-    if train_config.do_eval:
-        avg_eval_prep = sum(val_prep)/len(val_prep) 
-        avg_eval_loss = sum(val_loss)/len(val_loss) 
+    
+    avg_eval_prep = sum(val_prep)/len(val_prep) 
+    avg_eval_loss = sum(val_loss)/len(val_loss) 
 
     results['avg_train_prep'] = avg_train_prep
     results['avg_train_loss'] = avg_train_loss
     
-    if train_config.do_eval:
-        results['avg_eval_prep'] = avg_eval_prep
-        results['avg_eval_loss'] = avg_eval_loss
+    
+    results['avg_eval_prep'] = avg_eval_prep
+    results['avg_eval_loss'] = avg_eval_loss
     results["avg_epoch_time"] = avg_epoch_time
     results["avg_checkpoint_time"] = avg_checkpoint_time
     return results

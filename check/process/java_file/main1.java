@@ -1,33 +1,17 @@
 import java.util.Scanner;
-public class Main{
-    public static void main(String[] args){
-        int num;
+public class Main {
+    public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-        num = sc.nextInt();
-        if(num>0){
-            if(Tool.isPower(num)){
-                System.out.println("yes");
+        int n = sc.nextInt();
+        if (n > 9 || n < 1) {
+            System.out.println("Input error.");
+            return;
+        }
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j <= n; j++) {
+                System.out.printf("%dX%d=%d\t", i, j, i * j);
             }
-            else{
-                System.out.println("no");
-            }
+            System.out.println();
         }
-        else{
-            System.out.println("error");
-        }
-    }
-}
-class Tool{
-    public static boolean isPower(int num){
-        int i=0;
-        int n=2;
-        while(n<num){
-            n=n*2;
-            i++;
-        }
-        if(n==num)
-            return true;
-        else
-            return false;
     }
 }

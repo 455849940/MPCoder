@@ -57,6 +57,13 @@ class processClass:
             self.vid2idmap = dict()  
     def get_idmap(self):
         return self.id2vidmap
+    def restore_idmap(self, json_path = "./user2vid.json"):
+            json.dump(
+            self.id2vidmap,
+            open(json_path, 'w'),
+            indent=4,
+            ensure_ascii=False
+        )
     def get_instruction(self, input, answer,language, is_test = False):
         instruction =B_SYS + f"Give you a Programming problem,please Provide answers in {language}"+ E_SYS + input
         if is_test:

@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # 启动脚本1，放入后台
-bash predict1.sh > ./script/1.log &
+bash ./predict_partLong.sh 2 2 &
 
 # 启动脚本2，放入后台
-bash  predict2.sh > ./script/2.log &
+bash ./predict_partLong.sh 3 2 &
 
 # 启动脚本3，放入后台
-bash  predict3.sh > ./script/3.log  &
+bash ./predict_partLong.sh 5 3 &
 
-bash  predict4.sh > ./script/4.log &
+bash ./predict_partLong.sh 6 4 &
 
 # 等待所有后台任务完成
 wait

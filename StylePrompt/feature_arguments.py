@@ -5,20 +5,47 @@ from transformers import TrainingArguments
 
 @dataclass
 class train_config(TrainingArguments):
+    idnum : int = field(
+        default= 1121,
+        metadata={"help": "idnum"}
+    )
+    choose_model_M: bool = field(
+        default= False,
+        metadata={"help": "choose_model_M"}
+    )
     
     continue_train: bool = field(
         default= False,
         metadata={"help": "continue train."}
     )
-    
+    do_eval: bool = field(
+        default= True,
+        metadata={"help": "do_eval"}
+    )
+    is_predict: bool = field(
+        default= True,
+        metadata={"help": "is_predict"}
+    )
+    human_eval: bool = field(
+        default= False,
+        metadata={"help": "human_eval"}
+    )
+    human_uid: int = field(
+        default= -1,
+        metadata={"help": "human_uid"}
+    )
+    scaler: bool = field(
+        default= False,
+        metadata={"help": "scaler"}
+    )
     forwardChoose: int = field(
         default= 0, 
-        metadata={"help": "forwardChoose [0,1]"}
+        metadata={"help": "forwardChoose [0,1,2]"}
     )
     
     forwardChoose2: int = field(
-        default= 1, 
-        metadata={"help": "forwardChoose2 [0,1]"}
+        default= -1, 
+        metadata={"help": "forwardChoose2 [0,1,2]"}
     )
     
     # model params
@@ -118,7 +145,7 @@ class train_config(TrainingArguments):
         metadata={"help": "humaneval_java datasets paths."}
     )
     human_eval_out_path: str = field(
-        default="../out_predict/humaneval_java_out.jsonl",
+        default="../out_predict/humaneval_MSA_Long50/",
         metadata={"help": "humaneval_java datasets paths."}
     )
     train_data_path: List[str] = field(
@@ -150,7 +177,10 @@ class train_config(TrainingArguments):
         default="../data/Java_programming/Java_feature/user_style.json",
         metadata={"help": "train datasets paths."}
     )
-    
+    user_id2vid_data_path: str = field(
+        default=".-1",
+        metadata={"help": "train datasets paths."}
+    )
     
     # training hyperparams
     learning_rate2:float = field(default=1e-5, metadata={"help": "model stage 2 learining_rate"})

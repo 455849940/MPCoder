@@ -6,6 +6,23 @@ from transformers import TrainingArguments
 @dataclass
 class train_config(TrainingArguments):
     
+    human_eval: bool = field(
+        default= False,
+        metadata={"help": "human_eval"}
+    )
+    human_uid: int = field(
+        default= -1,
+        metadata={"help": "human_uid"}
+    )
+    human_prompt_uid: int = field(
+        default= 3,
+        metadata={"help": "human_uid"}
+    )
+    human_eval_out_path: str = field(
+        default="./out_predict/",
+        metadata={"help": "humaneval_java datasets paths."}
+    )
+    
     continue_train: str = field(
         default= False,
         metadata={"help": "continue train."}
@@ -13,6 +30,11 @@ class train_config(TrainingArguments):
     choose_model_name: str = field(
         default="perfer_Base", 
         metadata={"help": "perfer_Base perfer_Aug perfer_AugT"}
+    )
+    
+    scaler: bool = field(
+        default= True,
+        metadata={"help": "scaler"}
     )
     
     # model params

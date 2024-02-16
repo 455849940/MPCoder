@@ -1,0 +1,11 @@
+CUDA_VISIBLE_DEVICES=$3 python predict.py \
+    --debug_mode False \
+    --human_eval True \
+    --human_uid $1 \
+    --human_prompt_uid $2\
+    --per_device_test_batch_size 4 \
+    --output_dir style_model/Short1121 \
+    --train_data_path ./data/Java_programming/Java_programming_train.json \
+    --eval_data_path ./data/Java_programming/Java_programming_dev.json \
+    --test_data_path ./data/Java_programming/Java_programming_test.json \
+    --human_eval_out_path ./humaneval_data/Short11121_ISF_P$2/
